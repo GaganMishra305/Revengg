@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+nasm -f elf32 -g -F dwarf "$1.asm" -o "$1.o"
+ld -m elf_i386 -o "$1" "$1.o"
