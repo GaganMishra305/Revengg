@@ -5,7 +5,7 @@ Collection of notes and challenges of reverse engineering that I have gathered f
 Reverse engineering is cool and I wanna learn how to do it properly.
 
 ## References:
-1. https://0xinfection.xyz/reversing/
+1. https://0xinfection.xyz/reversing/ [completed everything except arm-architecture]
 2. https://pwnable.kr/
 3. wargames(?) 
 4. crackmes(?)
