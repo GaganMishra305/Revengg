@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GDB for CTF</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0c0f;
+    --bg2: #0f1218;
+    --bg3: #141920;
+    --border: #1e2730;
+    --border2: #2a3540;
+    --green: #00ff88;
+    --green-dim: #00ff8830;
+    --green-faint: #00ff8812;
+    --cyan: #00d4ff;
+    --cyan-dim: #00d4ff25;
+    --red: #ff4757;
+    --red-dim: #ff475720;
+    --yellow: #ffd32a;
+    --yellow-dim: #ffd32a20;
+    --orange: #ff6b35;
+    --purple: #9b59b6;
+    --text: #c8d8e8;
+    --text-dim: #6a8090;
+    --text-faint: #3a5060;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    height: 48px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .topbar-title {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--green);
+    letter-spacing: -0.3px;
+  }
+  .topbar-sub {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+  .progress-bar-wrap {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .progress-label { color: var(--text-dim); font-size: 11px; }
+  .progress-track {
+    width: 160px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px var(--green);
+  }
+  .lesson-counter { color: var(--green); font-size: 11px; font-weight: 700; }
+
+  /* LAYOUT */
+  .layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 12px 0;
+  }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .sidebar-section {
+    padding: 6px 16px 4px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 700;
+    margin-top: 8px;
+  }
+
+  .lesson-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    position: relative;
+  }
+  .lesson-btn:hover { background: var(--green-faint); color: var(--text); }
+  .lesson-btn.active {
+    background: var(--green-dim);
+    color: var(--green);
+    border-right: 2px solid var(--green);
+  }
+  .lesson-btn .num {
+    font-size: 10px;
+    color: var(--text-faint);
+    width: 18px;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .lesson-btn.active .num { color: var(--green); }
+  .lesson-btn .done-mark {
+    margin-left: auto;
+    color: var(--green);
+    font-size: 10px;
+    display: none;
+  }
+  .lesson-btn.done .done-mark { display: block; }
+  .lesson-btn.done .num { color: var(--green); }
+
+  /* MAIN CONTENT */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 36px;
+  }
+  .main::-webkit-scrollbar { width: 4px; }
+  .main::-webkit-scrollbar-track { background: transparent; }
+  .main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .lesson-header {
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 18px;
+  }
+  .lesson-tag {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--green);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .lesson-title {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 800;
+    color: #e8f4ff;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .lesson-desc {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    max-width: 680px;
+    line-height: 1.8;
+  }
+
+  /* CONTENT BLOCKS */
+  .block { margin-bottom: 22px; }
+
+  .block-title {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .block-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .prose {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.85;
+    max-width: 720px;
+  }
+  .prose strong { color: var(--cyan); font-weight: 500; }
+  .prose .hl { color: var(--green); }
+  .prose .warn { color: var(--yellow); }
+  .prose .danger { color: var(--red); }
+
+  /* CODE */
+  .code-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.5px;
+  }
+  .copy-btn {
+    cursor: pointer;
+    color: var(--text-dim);
+    border: none;
+    background: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    transition: color 0.2s;
+  }
+  .copy-btn:hover { color: var(--green); }
+  .code-body {
+    padding: 14px 18px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.9;
+  }
+  .code-body::-webkit-scrollbar { height: 3px; }
+  .code-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .cmd { color: var(--green); }
+  .cmt { color: var(--text-faint); font-style: italic; }
+  .addr { color: var(--cyan); }
+  .str { color: var(--yellow); }
+  .num { color: var(--orange); }
+  .kw { color: var(--purple); }
+  .out { color: var(--text-dim); }
+
+  /* CMD TABLE */
+  .cmd-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+  }
+  .cmd-table th {
+    text-align: left;
+    padding: 7px 14px;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+  }
+  .cmd-table td {
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    vertical-align: top;
+  }
+  .cmd-table tr:last-child td { border-bottom: none; }
+  .cmd-table tr:hover td { background: var(--green-faint); }
+  .cmd-table .tcmd { color: var(--green); }
+  .cmd-table .tshort { color: var(--cyan); font-size: 11px; }
+  .cmd-table .tdesc { color: var(--text-dim); font-size: 11.5px; }
+
+  /* TIP BOX */
+  .tip {
+    border-left: 3px solid var(--cyan);
+    background: var(--cyan-dim);
+    padding: 10px 16px;
+    border-radius: 0 4px 4px 0;
+    margin: 12px 0;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.8;
+  }
+  .tip .tip-label { color: var(--cyan); font-weight: 700; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .warn-box {
+    border-left: 3px solid var(--yellow);
+    background: var(--yellow-dim);
+    padding: 10px 16px;
+    border-radius: 0 4px 4px 0;
+    margin: 12px 0;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.8;
+  }
+  .warn-box .tip-label { color: var(--yellow); font-weight: 700; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+
+  /* CHALLENGE BOX */
+  .challenge {
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .challenge-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: var(--red-dim);
+    border-bottom: 1px solid var(--border2);
+    cursor: pointer;
+    user-select: none;
+  }
+  .challenge-header-left { display: flex; align-items: center; gap: 10px; }
+  .challenge-icon { color: var(--red); font-size: 14px; }
+  .challenge-title-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--red);
+    letter-spacing: 0.3px;
+  }
+  .challenge-tag {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--red);
+    opacity: 0.7;
+  }
+  .challenge-toggle {
+    font-size: 10px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+  .challenge-body {
+    padding: 18px;
+    background: var(--bg3);
+    display: none;
+  }
+  .challenge-body.open { display: block; }
+  .challenge-q {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.85;
+    margin-bottom: 14px;
+  }
+  .challenge-hint {
+    margin-top: 14px;
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .hint-toggle {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: var(--mono);
+    transition: color 0.2s;
+  }
+  .hint-toggle:hover { color: var(--text); }
+  .hint-body {
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-top: 1px dashed var(--border2);
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.8;
+    display: none;
+  }
+  .hint-body.open { display: block; }
+  .hint-body .hcmd { color: var(--green); }
+  .done-btn {
+    margin-top: 14px;
+    padding: 8px 20px;
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .done-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-faint); }
+  .done-btn.marked { border-color: var(--green); color: var(--green); background: var(--green-faint); }
+
+  /* NAV BUTTONS */
+  .nav-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .nav-btn {
+    padding: 10px 22px;
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    transition: all 0.2s;
+    color: var(--text-dim);
+    background: var(--bg2);
+  }
+  .nav-btn:hover { border-color: var(--green); color: var(--green); }
+  .nav-btn.primary {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green);
+    font-weight: 700;
+  }
+  .nav-btn.primary:hover { background: var(--green); color: #000; }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .nav-btn:disabled:hover { border-color: var(--border2); color: var(--text-dim); background: var(--bg2); }
+
+  /* CHEATSHEET PANEL */
+  .cheatsheet-toggle {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    writing-mode: vertical-rl;
+    padding: 14px 6px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--green);
+    cursor: pointer;
+    z-index: 100;
+    font-family: var(--mono);
+    font-weight: 700;
+  }
+  .cheatsheet-panel {
+    position: fixed;
+    right: -320px;
+    top: 48px;
+    bottom: 0;
+    width: 320px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 99;
+    transition: right 0.3s ease;
+    padding: 20px 0;
+  }
+  .cheatsheet-panel.open { right: 0; }
+  .cheatsheet-panel::-webkit-scrollbar { width: 3px; }
+  .cheatsheet-panel::-webkit-scrollbar-thumb { background: var(--border2); }
+  .cs-section { margin-bottom: 20px; }
+  .cs-section-title {
+    padding: 8px 18px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .cs-row { display: flex; gap: 8px; align-items: baseline; padding: 5px 18px; }
+  .cs-cmd { color: var(--green); font-size: 11.5px; white-space: nowrap; min-width: 130px; }
+  .cs-desc { color: var(--text-dim); font-size: 11px; line-height: 1.5; }
+
+  /* INLINE CODE */
+  code {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--green);
+  }
+
+  .inline-addr { color: var(--cyan); }
+  .inline-str { color: var(--yellow); }
+
+  /* HIDDEN */
+  .lesson-content { display: none; }
+  .lesson-content.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title">$ gdb --ctf</span>
+  <span class="topbar-sub">/ interactive field guide</span>
+  <div class="progress-bar-wrap">
+    <span class="progress-label">progress</span>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <span class="lesson-counter" id="lessonCounter">0/12</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">Foundations</div>
+    <button class="lesson-btn active" data-lesson="0" onclick="goLesson(0)">
+      <span class="num">01</span>Starting GDB
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="1" onclick="goLesson(1)">
+      <span class="num">02</span>Breakpoints
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="2" onclick="goLesson(2)">
+      <span class="num">03</span>Execution Control
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="3" onclick="goLesson(3)">
+      <span class="num">04</span>Registers
+      <span class="done-mark">✓</span>
+    </button>
+    <div class="sidebar-section">Memory</div>
+    <button class="lesson-btn" data-lesson="4" onclick="goLesson(4)">
+      <span class="num">05</span>Examining Memory
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="5" onclick="goLesson(5)">
+      <span class="num">06</span>Disassembly
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="6" onclick="goLesson(6)">
+      <span class="num">07</span>Stack & Frames
+      <span class="done-mark">✓</span>
+    </button>
+    <div class="sidebar-section">Power Tools</div>
+    <button class="lesson-btn" data-lesson="7" onclick="goLesson(7)">
+      <span class="num">08</span>Modifying State
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="8" onclick="goLesson(8)">
+      <span class="num">09</span>Watchpoints
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="9" onclick="goLesson(9)">
+      <span class="num">10</span>Searching Memory
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="10" onclick="goLesson(10)">
+      <span class="num">11</span>Scripting & Automation
+      <span class="done-mark">✓</span>
+    </button>
+    <button class="lesson-btn" data-lesson="11" onclick="goLesson(11)">
+      <span class="num">12</span>PWNDBG / GEF / PEDA
+      <span class="done-mark">✓</span>
+    </button>
+  </div>
+
+  <div class="main" id="mainContent">
+
+    <!-- ===================== LESSON 0 ===================== -->
+    <div class="lesson-content active" id="lesson-0">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 01 · Foundations</div>
+        <div class="lesson-title">Starting GDB & Basic Navigation</div>
+        <div class="lesson-desc">Before you can pwn anything, you need to know how to launch GDB, attach to a process, load symbols, and find your way around. This is your entry point.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Launching</div>
+        <div class="code-block">
+          <div class="code-header"><span>shell</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">gdb ./binary</span>              <span class="cmt"># Load binary (no run yet)</span>
+<span class="cmd">gdb -q ./binary</span>           <span class="cmt"># Quiet mode — suppress banner</span>
+<span class="cmd">gdb ./binary core</span>         <span class="cmt"># Load binary with a core dump</span>
+<span class="cmd">gdb -p &lt;pid&gt;</span>              <span class="cmt"># Attach to running process</span>
+<span class="cmd">gdb --args ./binary arg1 arg2</span>  <span class="cmt"># Pass args at launch</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">💡 Tip</div>
+          Always use <code>gdb -q</code> in CTFs. The banner wastes screen space.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Running the Binary</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">run</span>                        <span class="cmt"># or just: r</span>
+<span class="cmd">run arg1 arg2</span>             <span class="cmt"># Run with arguments</span>
+<span class="cmd">run &lt; input.txt</span>           <span class="cmt"># Redirect stdin</span>
+<span class="cmd">run $(python3 -c 'print("A"*100)')</span>  <span class="cmt"># Classic overflow test</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Essential Housekeeping</div>
+        <table class="cmd-table">
+          <tr><th>Command</th><th>Short</th><th>What it does</th></tr>
+          <tr><td class="tcmd">quit</td><td class="tshort">q</td><td class="tdesc">Exit GDB</td></tr>
+          <tr><td class="tcmd">help &lt;cmd&gt;</td><td class="tshort">h</td><td class="tdesc">Get help on any command</td></tr>
+          <tr><td class="tcmd">set args arg1 arg2</td><td class="tshort">—</td><td class="tdesc">Set args for next run</td></tr>
+          <tr><td class="tcmd">show args</td><td class="tshort">—</td><td class="tdesc">Check currently set args</td></tr>
+          <tr><td class="tcmd">info files</td><td class="tshort">—</td><td class="tdesc">Info about loaded binary</td></tr>
+          <tr><td class="tcmd">set disassembly-flavor intel</td><td class="tshort">—</td><td class="tdesc">Intel syntax (do this always)</td></tr>
+        </table>
+        <div class="tip">
+          <div class="tip-label">⚡ Pro Move</div>
+          Put <code>set disassembly-flavor intel</code> in your <code>~/.gdbinit</code> so you never have to type it again. Also add <code>set pagination off</code> to disable the annoying "press enter to continue" prompts.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Recommended ~/.gdbinit</div>
+        <div class="code-block">
+          <div class="code-header"><span>~/.gdbinit</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">set disassembly-flavor intel</span>
+<span class="cmd">set pagination off</span>
+<span class="cmd">set confirm off</span>
+<span class="cmd">set print pretty on</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 01: Get Oriented</div>
+              <div class="challenge-tag">Practice · 5 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Write a tiny C program, compile it <strong>without optimizations</strong> (<code>gcc -g -O0 -o test test.c</code>), and do the following in GDB:<br><br>
+            1. Launch GDB in quiet mode<br>
+            2. Set Intel syntax<br>
+            3. Run the binary and observe it exits normally<br>
+            4. Run it again with a fake argument<br>
+            5. Use <code>info files</code> to see the entry point address<br><br>
+            <strong>Bonus:</strong> What's the difference between the entry point and <code>main</code>? (Hint: think <code>_start</code>)
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              Sample C program: <br>
+              <span class="hcmd">int main(int argc, char** argv) { return 0; }</span><br><br>
+              Launch: <span class="hcmd">gdb -q ./test</span><br>
+              Set syntax: <span class="hcmd">set disassembly-flavor intel</span><br>
+              Run: <span class="hcmd">r</span> then <span class="hcmd">r hello</span><br>
+              Entry point: <span class="hcmd">info files</span> — look for "Entry point" line<br><br>
+              <em>_start is the real entry point set by the linker; it sets up the environment then calls main().</em>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 0)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" disabled>← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(1)">Next: Breakpoints →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 1 ===================== -->
+    <div class="lesson-content" id="lesson-1">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 02 · Foundations</div>
+        <div class="lesson-title">Breakpoints</div>
+        <div class="lesson-desc">Breakpoints are how you stop execution at the exact moment you care about. In CTFs this means: right before a comparison, inside a decryption routine, or at a suspicious function call.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Setting Breakpoints</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">break main</span>               <span class="cmt"># Break at start of main (needs symbols)</span>
+<span class="cmd">b main</span>                   <span class="cmt"># Same, shorthand</span>
+<span class="cmd">b *0x401234</span>              <span class="cmt"># Break at EXACT address (no symbols needed)</span>
+<span class="cmd">b *main+42</span>               <span class="cmt"># Break 42 bytes into main</span>
+<span class="cmd">b strcmp</span>                  <span class="cmt"># Break at libc strcmp (plt or real)</span>
+<span class="cmd">b filename.c:37</span>          <span class="cmt"># Break at source line (if compiled with -g)</span>
+<span class="cmd">tb main</span>                  <span class="cmt"># Temporary breakpoint (auto-deletes after hit)</span>
+          </div>
+        </div>
+        <div class="warn-box">
+          <div class="tip-label">⚠ CTF Reality</div>
+          Most CTF binaries are stripped — no symbols. You'll be using <code>b *0xADDRESS</code> almost exclusively. Get comfortable finding addresses via disassembly first.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Managing Breakpoints</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">info breakpoints</span>          <span class="cmt"># List all breakpoints (also: i b)</span>
+<span class="cmd">delete 2</span>                  <span class="cmt"># Delete breakpoint #2</span>
+<span class="cmd">delete</span>                    <span class="cmt"># Delete ALL breakpoints (prompts)</span>
+<span class="cmd">disable 1</span>                 <span class="cmt"># Disable without deleting</span>
+<span class="cmd">enable 1</span>                  <span class="cmt"># Re-enable</span>
+<span class="cmd">clear main</span>               <span class="cmt"># Clear bp at function name</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Conditional Breakpoints (very powerful)</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">b main if argc > 2</span>        <span class="cmt"># Only break if condition true</span>
+<span class="cmd">b *0x401234 if $rax == 0</span>  <span class="cmt"># Break only when rax is 0</span>
+<span class="cmd">condition 2 $rdi == 0x41</span>  <span class="cmt"># Add condition to existing bp #2</span>
+<span class="cmd">condition 2</span>               <span class="cmt"># Remove condition from bp #2</span>
+<span class="cmd">ignore 1 5</span>               <span class="cmt"># Skip bp #1 the next 5 times</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">💡 Real Use Case</div>
+          In a loop that runs 10,000 times, instead of hitting 'c' repeatedly — use <code>ignore 1 9999</code> to break on the 10000th iteration.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Commands on Breakpoint</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb — auto-print when a bp is hit</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">commands 1</span>               <span class="cmt"># Attach commands to bp #1</span>
+<span class="out">&gt; printf "rax = %d\n", $rax</span>
+<span class="out">&gt; continue</span>
+<span class="out">&gt; end</span>
+
+<span class="cmt"># Now every time bp 1 is hit, it prints rax and continues</span>
+<span class="cmt"># This is GOLD for tracing loops without manual interaction</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 02: Intercept a Comparison</div>
+              <div class="challenge-tag">Practice · 10 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Write this C program and compile with <code>gcc -g -O0 -o cmp cmp.c</code>:<br><br>
+            <code>int check(int x) { return x == 0x1337; }</code><br>
+            <code>int main() { int v = 0xdead; if(check(v)) puts("win"); else puts("lose"); }</code><br><br>
+            In GDB:<br>
+            1. Set a breakpoint at <code>check</code><br>
+            2. Run and observe it hits<br>
+            3. Use <code>info breakpoints</code> to inspect it<br>
+            4. Add a conditional: only break if the argument <code>x == 0x1337</code> (hint: first arg is in <code>$rdi</code>)<br>
+            5. Run again — does it hit? (it shouldn't, since x=0xdead)<br>
+            6. <strong>Bonus:</strong> use <code>commands</code> to auto-print <code>$rdi</code> every time the function is called
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b check</span> → <span class="hcmd">r</span><br>
+              <span class="hcmd">info breakpoints</span><br>
+              Conditional: <span class="hcmd">condition 1 $rdi == 0x1337</span><br>
+              <span class="hcmd">r</span> again — won't hit since rdi=0xdead<br><br>
+              Commands:<br>
+              <span class="hcmd">commands 1</span><br>
+              <span class="hcmd">&gt; printf "arg = %x\n", $rdi</span><br>
+              <span class="hcmd">&gt; end</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 1)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(0)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(2)">Next: Execution Control →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 2 ===================== -->
+    <div class="lesson-content" id="lesson-2">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 03 · Foundations</div>
+        <div class="lesson-title">Execution Control</div>
+        <div class="lesson-desc">After hitting a breakpoint, you need precise control over where execution goes next. The difference between <code>next</code> and <code>step</code> has saved (and cost) many CTF players hours.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">The Core Four</div>
+        <table class="cmd-table">
+          <tr><th>Command</th><th>Short</th><th>What it does</th></tr>
+          <tr><td class="tcmd">continue</td><td class="tshort">c</td><td class="tdesc">Resume until next breakpoint or crash</td></tr>
+          <tr><td class="tcmd">next</td><td class="tshort">n</td><td class="tdesc">Execute one C line, <strong>step OVER</strong> function calls</td></tr>
+          <tr><td class="tcmd">step</td><td class="tshort">s</td><td class="tdesc">Execute one C line, <strong>step INTO</strong> function calls</td></tr>
+          <tr><td class="tcmd">finish</td><td class="tshort">fin</td><td class="tdesc">Run until current function returns, show return value</td></tr>
+        </table>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Assembly-Level Control (what you actually use in CTFs)</div>
+        <table class="cmd-table">
+          <tr><th>Command</th><th>Short</th><th>What it does</th></tr>
+          <tr><td class="tcmd">nexti</td><td class="tshort">ni</td><td class="tdesc">One INSTRUCTION, step over calls</td></tr>
+          <tr><td class="tcmd">stepi</td><td class="tshort">si</td><td class="tdesc">One INSTRUCTION, step into calls</td></tr>
+          <tr><td class="tcmd">until *0x401234</td><td class="tshort">u</td><td class="tdesc">Run until address (great for skipping loops)</td></tr>
+          <tr><td class="tcmd">jump *0x401234</td><td class="tshort">j</td><td class="tdesc">Jump execution to address (does NOT update stack!)</td></tr>
+        </table>
+        <div class="warn-box">
+          <div class="tip-label">⚠ Key Distinction</div>
+          <code>next</code>/<code>step</code> work at source level. In stripped binaries, use <code>nexti</code>/<code>stepi</code> — they work at the instruction level regardless of debug info.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Useful Extras</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">ni 10</span>                    <span class="cmt"># Execute 10 instructions (step N times)</span>
+<span class="cmd">c 5</span>                      <span class="cmt"># Continue, but stop after hitting bp 5 more times</span>
+<span class="cmd">return 0</span>                 <span class="cmt"># Force current function to return with value 0</span>
+<span class="cmd">call printf("hi\n")</span>      <span class="cmt"># Call arbitrary functions mid-execution</span>
+<span class="cmd">signal SIGSEGV</span>          <span class="cmt"># Send a signal to the process</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">The Trick: Enter key repeats last command</div>
+        <div class="tip">
+          <div class="tip-label">⚡ Speed Tip</div>
+          After typing <code>ni</code>, just pressing <strong>Enter</strong> repeats the last command. This is how you single-step quickly through assembly without retyping. Same for <code>c</code>, <code>n</code>, etc.
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 03: Step Through a Loop</div>
+              <div class="challenge-tag">Practice · 10 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile this:<br>
+            <code>int secret() { return 0x1337beef; }</code><br>
+            <code>int main() { for(int i=0;i&lt;5;i++) { int v=secret(); } return 0; }</code><br><br>
+            1. Break at <code>main</code>, run it<br>
+            2. Use <code>ni</code> to step instruction by instruction. Notice what happens when you hit the <code>call</code> instruction<br>
+            3. Now use <code>si</code> instead — you step INTO <code>secret</code><br>
+            4. Once inside <code>secret</code>, use <code>finish</code> — observe the return value printed<br>
+            5. <strong>Bonus:</strong> Use <code>until</code> to skip past the loop entirely. What address do you target?
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b main</span> → <span class="hcmd">r</span> → spam <span class="hcmd">ni</span><br>
+              When you see <span class="hcmd">call secret</span>, use <span class="hcmd">si</span> to enter it<br>
+              Inside secret: <span class="hcmd">finish</span> — GDB prints "Value returned = 0x1337beef"<br><br>
+              For skipping the loop: first disassemble main (<span class="hcmd">disas main</span>), find the instruction after the loop, then <span class="hcmd">until *0x&lt;that_addr&gt;</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 2)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(1)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(3)">Next: Registers →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 3 ===================== -->
+    <div class="lesson-content" id="lesson-3">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 04 · Foundations</div>
+        <div class="lesson-title">Registers</div>
+        <div class="lesson-desc">Registers are where the action happens. In x86-64, function arguments, return values, comparisons — everything flows through registers. You need to read them fluently.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">x86-64 Register Cheatsheet</div>
+        <table class="cmd-table">
+          <tr><th>Register</th><th>Role</th><th>Notes</th></tr>
+          <tr><td class="tcmd">rax</td><td class="tshort">Return value</td><td class="tdesc">Also used for syscall number</td></tr>
+          <tr><td class="tcmd">rdi, rsi, rdx</td><td class="tshort">Args 1, 2, 3</td><td class="tdesc">System V AMD64 ABI calling convention</td></tr>
+          <tr><td class="tcmd">rcx, r8, r9</td><td class="tshort">Args 4, 5, 6</td><td class="tdesc">After 6 args, they go on the stack</td></tr>
+          <tr><td class="tcmd">rip</td><td class="tshort">Instruction ptr</td><td class="tdesc">"Where am I executing" — can't set directly</td></tr>
+          <tr><td class="tcmd">rsp</td><td class="tshort">Stack pointer</td><td class="tdesc">Points to top of stack</td></tr>
+          <tr><td class="tcmd">rbp</td><td class="tshort">Base pointer</td><td class="tdesc">Frame base (locals accessed as rbp-N)</td></tr>
+          <tr><td class="tcmd">rflags</td><td class="tshort">Flags</td><td class="tdesc">ZF, CF, SF, OF — set after comparisons</td></tr>
+        </table>
+        <div class="tip">
+          <div class="tip-label">💡 Memory Aid</div>
+          rdi, rsi, rdx, rcx, r8, r9 → <strong>"Diane's Silk Dress Cost Real Nine"</strong>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Reading Registers</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">info registers</span>           <span class="cmt"># All registers (also: i r)</span>
+<span class="cmd">info registers rax rdi</span>   <span class="cmt"># Specific registers only</span>
+<span class="cmd">p $rax</span>                   <span class="cmt"># Print rax as decimal</span>
+<span class="cmd">p/x $rax</span>                 <span class="cmt"># Print rax as hex</span>
+<span class="cmd">p/s (char*)$rdi</span>          <span class="cmt"># Print rdi as string (if it's a char*)</span>
+<span class="cmd">p/d $rdi</span>                 <span class="cmt"># Decimal</span>
+<span class="cmd">p/t $rax</span>                 <span class="cmt"># Binary</span>
+<span class="cmd">p $rip</span>                   <span class="cmt"># Current instruction pointer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Register Sub-parts (important for CTFs)</div>
+        <div class="code-block">
+          <div class="code-header"><span>x86-64 register anatomy</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># rax is 64-bit. Sub-parts:</span>
+<span class="cmd">p $rax</span>   <span class="cmt"># 64-bit (8 bytes)</span>
+<span class="cmd">p $eax</span>   <span class="cmt"># lower 32 bits</span>
+<span class="cmd">p $ax</span>    <span class="cmt"># lower 16 bits</span>
+<span class="cmd">p $al</span>    <span class="cmt"># lower 8 bits</span>
+<span class="cmd">p $ah</span>    <span class="cmt"># bits 8-15</span>
+
+<span class="cmt"># Same pattern for rbx/rcx/rdx, rdi/rsi -> edi/esi -> di/si</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Expressions using registers</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">p $rax + $rbx</span>            <span class="cmt"># Arithmetic in GDB</span>
+<span class="cmd">p $rsp + 8</span>               <span class="cmt"># Address 8 bytes above stack pointer</span>
+<span class="cmd">p/x *((long*)$rsp)</span>       <span class="cmt"># Dereference stack top as 64-bit int</span>
+<span class="cmd">x/xg $rsp</span>               <span class="cmt"># Same thing, different syntax (explained in lesson 5)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 04: Catch the Return Value</div>
+              <div class="challenge-tag">Practice · 10 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile: <code>int f(int a, int b) { return a * b + 0x41; } int main() { int r = f(7, 8); }</code><br><br>
+            1. Break at <code>f</code> and run<br>
+            2. Print <code>$rdi</code> and <code>$rsi</code> — what are they? (these are args 1 and 2)<br>
+            3. Use <code>finish</code> to return from f<br>
+            4. Print <code>$rax</code> — does it match <code>7*8+0x41 = 0x59</code>?<br>
+            5. <strong>Bonus:</strong> Break at the <code>call f</code> instruction (find it via <code>disas main</code>). Before the call, what's in rdi and rsi? After the call returns, what's in rax?
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b f</span> → <span class="hcmd">r</span><br>
+              <span class="hcmd">p $rdi</span> → 7, <span class="hcmd">p $rsi</span> → 8<br>
+              <span class="hcmd">finish</span> → <span class="hcmd">p/x $rax</span> → 0x59<br><br>
+              7 * 8 = 56, 56 + 0x41 = 56 + 65 = 121 = 0x79 (check your math!)
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 3)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(2)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(4)">Next: Examining Memory →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 4 ===================== -->
+    <div class="lesson-content" id="lesson-4">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 05 · Memory</div>
+        <div class="lesson-title">Examining Memory: The x Command</div>
+        <div class="lesson-desc">The <code>x</code> command is your memory microscope. It reads raw bytes from any address and displays them in any format. This is how you find flags, strings, canaries, and hidden values.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">x Command Syntax</div>
+        <div class="code-block">
+          <div class="code-header"><span>syntax</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">x/</span><span class="str">NFS</span> <span class="addr">address</span>
+
+<span class="cmt"># N = how many units to show (e.g., 10)</span>
+<span class="cmt"># F = format letter (see below)</span>
+<span class="cmt"># S = size letter (b=byte, h=half=2, w=word=4, g=giant=8)</span>
+<span class="cmt"># address = hex addr, register, symbol name</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Format Letters</div>
+        <table class="cmd-table">
+          <tr><th>Format</th><th>Meaning</th><th>Example</th></tr>
+          <tr><td class="tcmd">x</td><td class="tdesc">Hexadecimal</td><td class="tshort">x/8xb $rsp</td></tr>
+          <tr><td class="tcmd">d</td><td class="tdesc">Decimal (signed)</td><td class="tshort">x/4dw $rsp</td></tr>
+          <tr><td class="tcmd">u</td><td class="tdesc">Decimal (unsigned)</td><td class="tshort">x/4uw $rbp</td></tr>
+          <tr><td class="tcmd">s</td><td class="tdesc">Null-terminated string</td><td class="tshort">x/s $rdi</td></tr>
+          <tr><td class="tcmd">i</td><td class="tdesc">Machine instruction</td><td class="tshort">x/5i $rip</td></tr>
+          <tr><td class="tcmd">c</td><td class="tdesc">Character</td><td class="tshort">x/4c $rdi</td></tr>
+          <tr><td class="tcmd">t</td><td class="tdesc">Binary</td><td class="tshort">x/4tb $rsp</td></tr>
+          <tr><td class="tcmd">a</td><td class="tdesc">Address (with symbol)</td><td class="tshort">x/4ag $rsp</td></tr>
+        </table>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Most Used Combos in CTFs</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb — the ones you'll actually use</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">x/s $rdi</span>                 <span class="cmt"># Print string (first arg to function)</span>
+<span class="cmd">x/20xb $rsp</span>             <span class="cmt"># 20 bytes of stack as hex</span>
+<span class="cmd">x/4xg $rsp</span>              <span class="cmt"># 4 quadwords (8 bytes each) of stack</span>
+<span class="cmd">x/5i $rip</span>               <span class="cmt"># Next 5 instructions from current position</span>
+<span class="cmd">x/s 0x402010</span>            <span class="cmt"># Read string from .rodata or wherever</span>
+<span class="cmd">x/xg $rbp-8</span>             <span class="cmt"># Local variable at [rbp-8]</span>
+<span class="cmd">x/xg $rbp+0x10</span>          <span class="cmt"># Stack argument above base pointer</span>
+<span class="cmd">x/xg $rsp</span>               <span class="cmt"># Top of stack (usually return address)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Dereferencing Pointers</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># If rdi points to a struct or array:</span>
+<span class="cmd">x/8xb $rdi</span>              <span class="cmt"># First 8 bytes of what rdi points to</span>
+<span class="cmd">x/xg $rdi</span>               <span class="cmt"># First 8-byte value (possibly another pointer)</span>
+<span class="cmd">x/xg *$rdi</span>              <span class="cmt"># Double dereference</span>
+
+<span class="cmt"># Convenient cast with p:</span>
+<span class="cmd">p *(int*)$rdi</span>            <span class="cmt"># Treat rdi as int*</span>
+<span class="cmd">p *(char(*)[32])$rdi</span>    <span class="cmt"># Treat as char array of 32</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 05: Read the Hidden String</div>
+              <div class="challenge-tag">Practice · 10 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile: <code>char secret[] = "CTF{this_is_hidden}"; int main() { char buf[32]; fgets(buf,32,stdin); if(strcmp(buf,secret)==0) puts("win"); }</code><br><br>
+            1. Break at <code>strcmp</code><br>
+            2. Run and type some junk input<br>
+            3. When stopped at strcmp, <code>$rdi</code> = your input, <code>$rsi</code> = the secret. Print them both with <code>x/s</code><br>
+            4. <strong>Bonus:</strong> use <code>info proc mappings</code> to find the data segment, then use <code>x/s</code> on addresses in that range to find the string manually
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b strcmp</span> → <span class="hcmd">r</span> → type "junk"<br>
+              <span class="hcmd">x/s $rdi</span> → your input<br>
+              <span class="hcmd">x/s $rsi</span> → "CTF{this_is_hidden}"<br><br>
+              Mappings: <span class="hcmd">info proc mappings</span> → look for the range of your binary (not heap/stack/libc)
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 4)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(3)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(5)">Next: Disassembly →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 5 ===================== -->
+    <div class="lesson-content" id="lesson-5">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 06 · Memory</div>
+        <div class="lesson-title">Disassembly</div>
+        <div class="lesson-desc">You'll spend most of your CTF time reading disassembly. GDB's <code>disas</code> command is your primary lens for understanding what a binary actually does.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Disassembling</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">disas main</span>               <span class="cmt"># Disassemble main function</span>
+<span class="cmd">disas</span>                    <span class="cmt"># Disassemble current function (wherever rip is)</span>
+<span class="cmd">disas /m main</span>            <span class="cmt"># Interleave source lines (if -g compiled)</span>
+<span class="cmd">disas /r main</span>            <span class="cmt"># Show raw bytes alongside instructions</span>
+<span class="cmd">disas 0x401000, 0x401050</span> <span class="cmt"># Disassemble a range of addresses</span>
+<span class="cmd">x/20i main</span>              <span class="cmt"># Alternate: 20 instructions from main</span>
+<span class="cmd">x/20i $rip</span>              <span class="cmt"># 20 instructions from current position</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">TUI Mode (Terminal UI)</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">layout asm</span>               <span class="cmt"># Persistent assembly window at top</span>
+<span class="cmd">layout regs</span>              <span class="cmt"># Add register window</span>
+<span class="cmd">layout src</span>               <span class="cmt"># Source code window (if debug info)</span>
+<span class="cmd">layout split</span>             <span class="cmt"># Split: source + assembly</span>
+<span class="cmd">tui enable</span>               <span class="cmt"># Enable TUI</span>
+<span class="cmd">tui disable</span>              <span class="cmt"># Back to normal</span>
+<span class="cmd">Ctrl+X A</span>                 <span class="cmt"># Toggle TUI on/off</span>
+<span class="cmd">Ctrl+X 1</span>                 <span class="cmt"># Single-window TUI</span>
+<span class="cmd">Ctrl+X 2</span>                 <span class="cmt"># Two-window TUI</span>
+<span class="cmd">focus cmd</span>                <span class="cmt"># Move keyboard focus to command window</span>
+<span class="cmd">focus asm</span>                <span class="cmt"># Move focus to assembly window (scroll it)</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">💡 Workflow</div>
+          <code>layout asm</code> + <code>layout regs</code> gives you a live view of registers and current instruction as you step. This is the closest to a "real" debugger UI experience in vanilla GDB.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Reading Disassembly for CTFs</div>
+        <div class="code-block">
+          <div class="code-header"><span>example output — what to look for</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="out">Dump of assembler code for function main:</span>
+<span class="out">   0x401150 &lt;+0&gt;:   push   rbp</span>
+<span class="out">   0x401151 &lt;+1&gt;:   mov    rbp,rsp</span>
+<span class="addr">   0x401154 &lt;+4&gt;:   cmp    DWORD PTR [rbp-0x4],0x1337   </span><span class="cmt">&lt;-- comparison!</span>
+<span class="out">   0x40115b &lt;+11&gt;:  jne    0x401170 &lt;main+32&gt;</span>
+<span class="addr">   0x40115d &lt;+13&gt;:  call   0x401030 &lt;puts@plt&gt;           </span><span class="cmt">&lt;-- win path</span>
+<span class="out">   0x401162 &lt;+18&gt;:  jmp    0x401178</span>
+<span class="addr">   0x401170 &lt;+32&gt;:  call   0x401030 &lt;puts@plt&gt;           </span><span class="cmt">&lt;-- lose path</span>
+
+<span class="cmt"># Pattern: cmp + jne/je/jl/jg → find the comparison, set bp there</span>
+<span class="cmt"># then examine what's being compared</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 06: Find the Check</div>
+              <div class="challenge-tag">Practice · 15 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile stripped: <code>gcc -O1 -s -o check check.c</code> with:<br>
+            <code>int main(int argc,char**argv){if(argc&lt;2)return 1; if(atoi(argv[1])==0xCAFE)puts("win");else puts("lose");}</code><br><br>
+            1. Load in GDB and <code>disas main</code> — find the <code>cmp</code> instruction<br>
+            2. What value is being compared? (It's 0xCAFE = 51966)<br>
+            3. Set a breakpoint at the <code>cmp</code> instruction address<br>
+            4. Run with <code>r 1234</code> and inspect what's being compared<br>
+            5. Enable TUI with <code>layout asm</code> + <code>layout regs</code>, re-run and watch<br>
+            6. <strong>Bonus:</strong> use <code>disas /r</code> and look at the raw bytes of the cmp instruction. What are they?
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">disas main</span> → find line with <span class="hcmd">cmp eax, 0xcafe</span> (or similar)<br>
+              Note the address, e.g. <span class="hcmd">0x401165</span><br>
+              <span class="hcmd">b *0x401165</span> → <span class="hcmd">r 1234</span><br>
+              <span class="hcmd">p $eax</span> → should be 1234 (0x4d2)<br>
+              TUI: <span class="hcmd">layout asm</span> → <span class="hcmd">layout regs</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 5)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(4)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(6)">Next: Stack & Frames →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 6 ===================== -->
+    <div class="lesson-content" id="lesson-6">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 07 · Memory</div>
+        <div class="lesson-title">Stack & Call Frames</div>
+        <div class="lesson-desc">The stack is everything in exploitation — return addresses, local variables, canaries, saved registers. You need to read it like a map.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Stack Layout (x86-64)</div>
+        <div class="code-block">
+          <div class="code-header"><span>conceptual — when inside function f called by main</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># High addresses</span>
+<span class="out">  [main's locals]</span>
+<span class="out">  [main's saved rbp]    ← rbp+8 points here</span>
+<span class="addr">  [return address]      ← what rbp+8 actually IS in f's frame</span>
+<span class="addr">  [saved rbp of main]   ← $rbp in f points here</span>
+<span class="out">  [f's locals]</span>
+<span class="addr">  [f's locals ...]      ← $rsp points here (stack grows down)</span>
+<span class="cmt"># Low addresses</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">Key Formula</div>
+          <code>*($rbp + 8)</code> = return address of current function. In buffer overflow CTFs, <strong>overflowing a local buffer to reach rbp+8</strong> is the classic goal.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Stack Navigation Commands</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">backtrace</span>                <span class="cmt"># Call stack (also: bt)</span>
+<span class="cmd">bt full</span>                  <span class="cmt"># Call stack with local variables</span>
+<span class="cmd">frame 0</span>                  <span class="cmt"># Select frame 0 (current)</span>
+<span class="cmd">frame 1</span>                  <span class="cmt"># Select parent frame</span>
+<span class="cmd">up</span>                       <span class="cmt"># Go up one frame</span>
+<span class="cmd">down</span>                     <span class="cmt"># Go down one frame</span>
+<span class="cmd">info frame</span>               <span class="cmt"># Detailed info about current frame</span>
+<span class="cmd">info locals</span>              <span class="cmt"># Local variables in current frame</span>
+<span class="cmd">info args</span>                <span class="cmt"># Function arguments in current frame</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Reading the Stack Directly</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">x/20xg $rsp</span>             <span class="cmt"># 20 qwords from stack top (best overview)</span>
+<span class="cmd">x/xg $rbp+8</span>             <span class="cmt"># Return address of current function</span>
+<span class="cmd">x/xg $rbp</span>               <span class="cmt"># Saved rbp (previous frame's base)</span>
+<span class="cmd">x/xg $rbp-8</span>             <span class="cmt"># First local variable</span>
+<span class="cmd">p $rbp - $rsp</span>            <span class="cmt"># Size of current stack frame</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Finding Stack Canaries</div>
+        <div class="tip">
+          <div class="tip-label">CTF Context</div>
+          Stack canaries sit between local buffers and the saved rbp. They're typically at <code>[rbp - 8]</code> and look like <code>0x????????00000000</code> (null byte in LSB). In GDB, after reading the stack with <code>x/20xg $rsp</code>, the value that looks "random" between your buffer and the return address is the canary.
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># Find canary for binary compiled with -fstack-protector</span>
+<span class="cmd">x/xg $rbp-8</span>             <span class="cmt"># Often where canary lives</span>
+<span class="cmd">p/x $gs:0x28</span>            <span class="cmt"># Read canary from TLS directly (x86-64)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 07: Map the Stack</div>
+              <div class="challenge-tag">Practice · 15 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile: <code>void inner(int a){int x=0xAA;} void outer(){int b=0xBB;inner(42);} int main(){outer();}</code><br><br>
+            1. Break inside <code>inner</code>, run it<br>
+            2. <code>x/20xg $rsp</code> — dump the stack<br>
+            3. Use <code>backtrace</code> — identify inner→outer→main chain<br>
+            4. Use <code>info frame</code> — note the return address<br>
+            5. Manually verify: <code>x/xg $rbp+8</code> — does it match the return address from backtrace?<br>
+            6. Switch to outer's frame with <code>frame 1</code>, then <code>info locals</code><br>
+            7. <strong>Bonus:</strong> compile with <code>-fstack-protector-all</code> and find the canary
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b inner</span> → <span class="hcmd">r</span><br>
+              <span class="hcmd">x/20xg $rsp</span> → look for 0xBB (outer's b), return addresses<br>
+              <span class="hcmd">bt</span> → shows chain<br>
+              <span class="hcmd">info frame</span> → shows saved pc (return addr)<br>
+              <span class="hcmd">x/xg $rbp+8</span> → should match<br>
+              <span class="hcmd">frame 1</span> → <span class="hcmd">info locals</span> → b = 0xBB
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 6)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(5)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(7)">Next: Modifying State →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 7 ===================== -->
+    <div class="lesson-content" id="lesson-7">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 08 · Power Tools</div>
+        <div class="lesson-title">Modifying State</div>
+        <div class="lesson-desc">GDB doesn't just observe — it can rewrite registers, memory, and even jump execution. This is how you verify exploits, patch checks, and test hypotheses without recompiling.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Modifying Registers</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">set $rax = 0</span>             <span class="cmt"># Set rax to 0</span>
+<span class="cmd">set $rdi = 0x1337</span>        <span class="cmt"># Set function argument</span>
+<span class="cmd">set $rip = 0x401234</span>      <span class="cmt"># Jump to address (changes execution!)</span>
+<span class="cmd">set $rsp = $rsp - 8</span>      <span class="cmt"># Grow the stack manually</span>
+<span class="cmd">set $eflags = $eflags | 0x40</span>  <span class="cmt"># Set Zero Flag (makes JE jump)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Modifying Memory</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">set *0x601040 = 0x1337</span>   <span class="cmt"># Write 4 bytes to address</span>
+<span class="cmd">set {int}0x601040 = 42</span>   <span class="cmt"># Same, explicit cast (4 bytes)</span>
+<span class="cmd">set {long}0x601040 = 42</span>  <span class="cmt"># Write 8 bytes</span>
+<span class="cmd">set {char}0x601040 = 'A'</span> <span class="cmt"># Write 1 byte</span>
+<span class="cmd">set *((int*)$rbp-1) = 0</span> <span class="cmt"># Write to local variable</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">The CTF Classic: Patching a Branch</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb — bypass a check by flipping ZF</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># After a CMP instruction, before a JNE/JE:</span>
+<span class="cmt"># ZF=1 means "equal", ZF=0 means "not equal"</span>
+<span class="cmt"># JE  jumps if ZF=1 | JNE jumps if ZF=0</span>
+
+<span class="cmt"># If you're at a JNE you want to NOT jump (take fall-through / "win" path):</span>
+<span class="cmd">set $eflags = $eflags | 0x40</span>   <span class="cmt"># Set ZF=1 → JNE won't jump</span>
+
+<span class="cmt"># If you're at a JE you want to force the jump:</span>
+<span class="cmd">set $eflags = $eflags &amp; ~0x40</span>  <span class="cmt"># Clear ZF=0 → JE won't jump</span>
+<span class="cmd">set $eflags = $eflags | 0x40</span>   <span class="cmt"># Set ZF=1 → JE will jump</span>
+
+<span class="cmt"># Or just skip the jne entirely by jumping past it:</span>
+<span class="cmd">set $rip = 0x40116a</span>             <span class="cmt"># Manually jump to the "win" address</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">⚡ Most Common CTF Trick</div>
+          Stop right before a failing comparison. Flip ZF with <code>set $eflags</code> or directly set <code>$rip</code> to skip past the bad branch. This is how you quickly verify "if this check passed, would I get the flag?"
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Calling Functions from GDB</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">call (void)system("ls")</span>  <span class="cmt"># Call system() while paused</span>
+<span class="cmd">call (int)strlen("hello")</span> <span class="cmt"># Call strlen, see return value</span>
+<span class="cmd">call win()</span>               <span class="cmt"># Call arbitrary function</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 08: Bypass the Check</div>
+              <div class="challenge-tag">Practice · 15 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile: <code>int main(){int key=0xDEAD; if(key==0x1337)puts("FLAG{patched}");else puts("nope");}</code><br><br>
+            Method A — Flip the flag:<br>
+            1. Disassemble main, find the <code>cmp</code> + <code>jne</code><br>
+            2. Break right at the <code>jne</code> address<br>
+            3. Run, inspect <code>$eflags</code>, then set ZF to force the jump direction you want<br><br>
+            Method B — Rewrite memory:<br>
+            4. Break at the <code>cmp</code>, inspect <code>[rbp-4]</code> (or wherever key is)<br>
+            5. Use <code>set {int}address = 0x1337</code> to patch key<br>
+            6. Continue — does it print the flag?<br><br>
+            Method C — Call directly:<br>
+            7. Break at main, call <code>puts("FLAG{called}")</code> directly from GDB
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">disas main</span> → find cmp and jne addresses<br>
+              Break at jne: <span class="hcmd">b *0x&lt;jne_addr&gt;</span><br>
+              Flip ZF: <span class="hcmd">set $eflags = $eflags | 0x40</span> → <span class="hcmd">c</span><br><br>
+              For method B: <span class="hcmd">b *0x&lt;cmp_addr&gt;</span> → <span class="hcmd">r</span><br>
+              <span class="hcmd">x/xw $rbp-4</span> to find key's addr → <span class="hcmd">set {int}0x&lt;addr&gt; = 0x1337</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 7)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(6)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(8)">Next: Watchpoints →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 8 ===================== -->
+    <div class="lesson-content" id="lesson-8">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 09 · Power Tools</div>
+        <div class="lesson-title">Watchpoints</div>
+        <div class="lesson-desc">Watchpoints stop execution when a memory location is read or written. When you don't know WHERE something changes — but you know WHERE the value lives — watchpoints find it for you.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Watchpoint Commands</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">watch *0x601040</span>          <span class="cmt"># Break when this address is WRITTEN</span>
+<span class="cmd">watch *$rbp-8</span>            <span class="cmt"># Watch local variable at rbp-8</span>
+<span class="cmd">rwatch *0x601040</span>         <span class="cmt"># Break when READ</span>
+<span class="cmd">awatch *0x601040</span>         <span class="cmt"># Break on READ or WRITE</span>
+<span class="cmd">watch val</span>                <span class="cmt"># Watch variable by name (if symbols exist)</span>
+<span class="cmd">info watchpoints</span>         <span class="cmt"># List all watchpoints</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">💡 Use Case</div>
+          Classic scenario: you see a variable is 0 when it should be 1. Set a <code>watch</code> on it, run the program, and GDB will stop exactly when something writes to it. No more guessing which function is the culprit.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Hardware vs Software Watchpoints</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># Hardware watchpoints: fast (CPU debug registers), limited to ~4</span>
+<span class="cmt"># Software watchpoints: unlimited but SLOW (GDB checks after every instr)</span>
+
+<span class="cmd">set can-use-hw-watchpoints 0</span>  <span class="cmt"># Force software watchpoints</span>
+<span class="cmd">set can-use-hw-watchpoints 1</span>  <span class="cmt"># Use hardware (default)</span>
+
+<span class="cmt"># You'll hit the hw limit with 4+ watchpoints — GDB warns you</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 09: Track the Mutation</div>
+              <div class="challenge-tag">Practice · 10 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile: <code>int g=0; void a(){g=1;} void b(){g=2;} void c(){g=3;} int main(){a();b();c();printf("%d\n",g);}</code><br><br>
+            1. Break at main, run it<br>
+            2. Get the address of <code>g</code>: <code>p &g</code> (or <code>p/x &g</code>)<br>
+            3. Set a write watchpoint: <code>watch *ADDRESS_OF_G</code><br>
+            4. Continue — GDB should break every time g is written<br>
+            5. Each break: check the backtrace. Who wrote to g?<br>
+            6. <strong>Bonus:</strong> Try <code>rwatch</code> on g — does it also trigger when printf reads it?
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b main</span> → <span class="hcmd">r</span><br>
+              <span class="hcmd">p/x &g</span> → note the address (something like 0x404018)<br>
+              <span class="hcmd">watch *0x404018</span><br>
+              <span class="hcmd">c</span> → breaks at a() writing g=1<br>
+              <span class="hcmd">bt</span> → confirms it's a()<br>
+              <span class="hcmd">c</span> again → breaks at b(), then c()
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 8)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(7)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(9)">Next: Searching Memory →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 9 ===================== -->
+    <div class="lesson-content" id="lesson-9">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 10 · Power Tools</div>
+        <div class="lesson-title">Searching Memory & Mappings</div>
+        <div class="lesson-desc">Sometimes you know what value you're looking for, but not where it is. GDB's <code>find</code> command lets you scan memory regions for byte patterns — essential for finding flags, shellcode, and gadgets.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">find Command</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">find 0x400000, 0x401fff, "CTF{"</span>   <span class="cmt"># Find string in range</span>
+<span class="cmd">find 0x400000, +0x10000, 0x41, 0x41</span> <span class="cmt"># Find bytes "AA"</span>
+<span class="cmd">find /b 0x400000, 0x401fff, 0x90</span>    <span class="cmt"># Find NOP bytes (/b = byte size)</span>
+<span class="cmd">find /w 0x400000, 0x401fff, 0x1337</span>  <span class="cmt"># Find 4-byte value</span>
+<span class="cmd">find /g 0x400000, 0x401fff, 0x4141414141414141</span>  <span class="cmt"># Find 8-byte value</span>
+          </div>
+        </div>
+        <div class="tip">
+          <div class="tip-label">💡 Tip</div>
+          Use <code>info proc mappings</code> first to know which address ranges exist, then search within them. Searching outside valid ranges will error.
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Process Memory Mappings</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">info proc mappings</span>       <span class="cmt"># All memory regions with permissions</span>
+<span class="cmd">info sharedlibrary</span>       <span class="cmt"># Loaded shared libraries and their ranges</span>
+<span class="cmd">maintenance info sections</span> <span class="cmt"># ELF sections (.text, .data, .bss ...)</span>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>example output</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="out">          Start Addr           End Addr       Size     Offset  Perms  objfile</span>
+<span class="addr">          0x0000000000400000   0x0000000000401000  0x1000  0x0     r--p   /home/.../binary</span>
+<span class="addr">          0x0000000000401000   0x0000000000402000  0x1000  0x1000  r-xp   /home/.../binary</span>
+<span class="out">          0x0000007ffff7dc0000 0x0000007ffff7de5000        r--p   /libc.so.6</span>
+<span class="out">          0x00007ffffffde000   0x00007ffffffff000  0x21000 0x0     rwxp   [stack]</span>
+<span class="cmt"># r-xp = executable code | rwxp = read/write/exec | r--p = read-only</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Finding libc Base (ASLR bypass)</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb — common CTF pattern</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt"># Find where libc is loaded (changes each run with ASLR)</span>
+<span class="cmd">info proc mappings</span>       <span class="cmt"># Look for libc-*.so entry</span>
+<span class="cmd">p system</span>                 <span class="cmt"># Print address of system() — reveals libc base</span>
+<span class="cmd">p puts</span>                   <span class="cmt"># Same for puts</span>
+<span class="cmd">info address system</span>      <span class="cmt"># Address of symbol</span>
+
+<span class="cmt"># libc_base = system_addr - offset_of_system_in_libc</span>
+<span class="cmt"># offset: readelf -s /lib/x86_64-linux-gnu/libc.so.6 | grep system</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 10: Hunt the Flag</div>
+              <div class="challenge-tag">Practice · 15 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile: <code>char hidden[]="FLAG{memory_scan}"; int main(){sleep(0); return 0;}</code><br><br>
+            1. Break at main, run<br>
+            2. Use <code>info proc mappings</code> — identify the range of your binary (not libc)<br>
+            3. Use <code>find</code> to search for "FLAG{" within that range<br>
+            4. Once found: <code>x/s 0x&lt;found_addr&gt;</code> to print the full string<br>
+            5. <strong>Bonus:</strong> Search in the heap — first call malloc in your code, then break after it, get the heap range from mappings, and search for something you stored there.
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">b main</span> → <span class="hcmd">r</span><br>
+              <span class="hcmd">info proc mappings</span> → note your binary's range e.g. 0x404000-0x405000<br>
+              <span class="hcmd">find 0x404000, 0x405000, "FLAG{"</span><br>
+              <span class="hcmd">x/s 0x&lt;result&gt;</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 9)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(8)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(10)">Next: Scripting →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 10 ===================== -->
+    <div class="lesson-content" id="lesson-10">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 11 · Power Tools</div>
+        <div class="lesson-title">Scripting & Automation</div>
+        <div class="lesson-desc">Doing the same thing 50 times manually in GDB means you're losing CTF time. These techniques let you automate repetitive debugging tasks.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">GDB Scripts (.gdb files)</div>
+        <div class="code-block">
+          <div class="code-header"><span>solve.gdb</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">set pagination off</span>
+<span class="cmd">set disassembly-flavor intel</span>
+<span class="cmd">b main</span>
+<span class="cmd">r</span>
+<span class="cmd">x/20xg $rsp</span>
+<span class="cmd">info registers</span>
+<span class="cmd">q</span>
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>shell — run it</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">gdb -q -x solve.gdb ./binary</span>
+<span class="cmd">gdb -q --batch -x solve.gdb ./binary</span>  <span class="cmt"># Batch mode: runs script, exits, prints output</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">One-liners with -ex</div>
+        <div class="code-block">
+          <div class="code-header"><span>shell</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">gdb -q -batch -ex 'b main' -ex 'r' -ex 'x/20xg $rsp' ./binary</span>
+<span class="cmd">gdb -q -batch -ex 'disas main' ./binary</span>  <span class="cmt"># Quick disasm without entering GDB</span>
+<span class="cmd">gdb -q -batch -ex 'info address main' ./binary</span>  <span class="cmt"># Get main's address</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Python scripting inside GDB</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb — Python available natively</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">python print(gdb.parse_and_eval("$rax"))</span>
+<span class="cmd">python gdb.execute("info registers")</span>
+
+<span class="cmt"># Script file: solve.py</span>
+<span class="kw">import</span> gdb
+
+<span class="kw">class</span> <span class="str">HookBreak</span>(gdb.Breakpoint):
+    <span class="kw">def</span> stop(<span class="addr">self</span>):
+        rax = gdb.parse_and_eval(<span class="str">"$rax"</span>)
+        <span class="kw">print</span>(<span class="str">f"rax = {int(rax):#x}"</span>)
+        <span class="kw">return</span> <span class="num">False</span>  <span class="cmt"># False = don't actually stop, just log</span>
+
+HookBreak(<span class="str">"strcmp"</span>)
+gdb.execute(<span class="str">"r"</span>)
+          </div>
+        </div>
+        <div class="code-block">
+          <div class="code-header"><span>shell — run python script</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">gdb -q -x solve.py ./binary</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">Defining Custom GDB Commands</div>
+        <div class="code-block">
+          <div class="code-header"><span>gdb / ~/.gdbinit</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="kw">define</span> <span class="str">ctx</span>                 <span class="cmt"># Define a command called 'ctx'</span>
+  info registers
+  x/10i $rip
+  x/20xg $rsp
+<span class="kw">end</span>
+
+<span class="cmt"># Now type 'ctx' in GDB to get a full context dump</span>
+<span class="cmt"># (This is what pwndbg does automatically!)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Challenge 11: Automate a Trace</div>
+              <div class="challenge-tag">Practice · 15 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Take the loop-with-secret-function binary from Challenge 03 (calls secret() 5 times in a loop).<br><br>
+            Write a GDB script that:<br>
+            1. Sets a breakpoint at <code>secret</code><br>
+            2. Runs the binary<br>
+            3. Every time secret is called, auto-prints the value of <code>$rdi</code> (loop counter) and <code>continues</code> without pausing<br>
+            4. Exits when done<br><br>
+            Use the <code>commands</code> approach in a .gdb file, <strong>OR</strong> write a Python GDB script using <code>gdb.Breakpoint</code> with <code>stop()</code> returning <code>False</code>.
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              .gdb approach:<br>
+              <span class="hcmd">b secret</span><br>
+              <span class="hcmd">commands 1</span><br>
+              <span class="hcmd">&gt; printf "call #%d\n", $rdi</span><br>
+              <span class="hcmd">&gt; c</span><br>
+              <span class="hcmd">&gt; end</span><br>
+              <span class="hcmd">r</span><br><br>
+              Python approach: override stop() to print and return False<br>
+              <span class="hcmd">gdb -q -batch -x trace.py ./binary</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 10)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(9)">← prev</button>
+        <button class="nav-btn primary" onclick="goLesson(11)">Next: PWNDBG / GEF →</button>
+      </div>
+    </div>
+
+    <!-- ===================== LESSON 11 ===================== -->
+    <div class="lesson-content" id="lesson-11">
+      <div class="lesson-header">
+        <div class="lesson-tag">Lesson 12 · Final Boss</div>
+        <div class="lesson-title">PWNDBG / GEF / PEDA</div>
+        <div class="lesson-desc">Every serious CTF player uses a GDB plugin. They give you automatic context display, heap inspection, ROP tools, and color-coded output. This is what the pros are actually using.</div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">The Three Contenders</div>
+        <table class="cmd-table">
+          <tr><th>Plugin</th><th>Best For</th><th>Install</th></tr>
+          <tr><td class="tcmd">pwndbg</td><td class="tdesc">Most feature-rich. Pwn/exploit focused. Industry standard.</td><td class="tshort">github.com/pwndbg/pwndbg</td></tr>
+          <tr><td class="tcmd">GEF</td><td class="tdesc">Single file, easy setup. Great UI. Good for reversing.</td><td class="tshort">github.com/hugsy/gef</td></tr>
+          <tr><td class="tcmd">PEDA</td><td class="tdesc">Older, simpler. Good pattern tools.</td><td class="tshort">github.com/longld/peda</td></tr>
+        </table>
+        <div class="tip">
+          <div class="tip-label">Recommendation</div>
+          Use <strong>pwndbg</strong>. It's the most maintained and has the best ecosystem. Install it now: <code>git clone https://github.com/pwndbg/pwndbg && cd pwndbg && ./setup.sh</code>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">pwndbg: Essential Commands</div>
+        <div class="code-block">
+          <div class="code-header"><span>pwndbg</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt">## Context (auto-shown on every stop)</span>
+<span class="cmd">context</span>                  <span class="cmt"># Manual re-display: regs + stack + disas + backtrace</span>
+
+<span class="cmt">## Memory</span>
+<span class="cmd">telescope $rsp</span>           <span class="cmt"># Smart stack display — follows pointers, labels symbols</span>
+<span class="cmd">telescope $rsp 30</span>        <span class="cmt"># 30 entries</span>
+<span class="cmd">vmmap</span>                    <span class="cmt"># Better version of info proc mappings</span>
+<span class="cmd">search -s "CTF{"</span>         <span class="cmt"># Search all memory for string</span>
+<span class="cmd">search -4 0x1337</span>         <span class="cmt"># Search for 4-byte value</span>
+
+<span class="cmt">## Binary info</span>
+<span class="cmd">checksec</span>                 <span class="cmt"># Security flags: NX, ASLR, Canary, PIE, RELRO</span>
+<span class="cmd">elf</span>                      <span class="cmt"># ELF header info</span>
+
+<span class="cmt">## Heap</span>
+<span class="cmd">heap</span>                     <span class="cmt"># Show heap chunks</span>
+<span class="cmd">bins</span>                     <span class="cmt"># Show free bins (tcache, fastbin, etc.)</span>
+<span class="cmd">malloc_chunk 0xaddr</span>      <span class="cmt"># Inspect a specific chunk</span>
+
+<span class="cmt">## ROP / Exploitation</span>
+<span class="cmd">rop</span>                      <span class="cmt"># List ROP gadgets</span>
+<span class="cmd">cyclic 100</span>               <span class="cmt"># Generate De Bruijn pattern (for offset finding)</span>
+<span class="cmd">cyclic -l 0x61616164</span>    <span class="cmt"># Find offset of pattern value in rsp after crash</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">The CTF Workflow with pwndbg</div>
+        <div class="code-block">
+          <div class="code-header"><span>standard pwn challenge workflow</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmt">## Step 1: Recon</span>
+<span class="cmd">checksec</span>                 <span class="cmt"># What protections are enabled?</span>
+<span class="cmd">vmmap</span>                    <span class="cmt"># Memory layout</span>
+
+<span class="cmt">## Step 2: Find the overflow offset</span>
+<span class="cmd">r &lt;&lt;&lt; $(cyclic 200)</span>      <span class="cmt"># Crash it with a patterned input</span>
+<span class="cmd">cyclic -l $rsp</span>           <span class="cmt"># After crash: find offset to rsp</span>
+<span class="cmt"># OR if rip is overwritten:</span>
+<span class="cmd">cyclic -l 0x61616168</span>    <span class="cmt"># Find offset from rip value</span>
+
+<span class="cmt">## Step 3: Verify control</span>
+<span class="cmd">r &lt;&lt;&lt; $(python3 -c 'print("A"*OFFSET + "B"*8)')</span>
+<span class="cmd">p/x $rip</span>                 <span class="cmt"># Should be 0x4242424242424242</span>
+
+<span class="cmt">## Step 4: Craft exploit with pwntools (outside GDB)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">GEF Key Commands (if you use it instead)</div>
+        <div class="code-block">
+          <div class="code-header"><span>gef</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div>
+          <div class="code-body">
+<span class="cmd">context</span>                  <span class="cmt"># Same — auto context on stop</span>
+<span class="cmd">xinfo $rsp</span>              <span class="cmt"># Extended info about an address</span>
+<span class="cmd">pattern create 100</span>      <span class="cmt"># De Bruijn pattern (cyclic equivalent)</span>
+<span class="cmd">pattern search $rsp</span>     <span class="cmt"># Find offset</span>
+<span class="cmd">vmmap</span>                    <span class="cmt"># Memory map</span>
+<span class="cmd">got</span>                      <span class="cmt"># GOT table entries (libc leaks)</span>
+<span class="cmd">elf-info</span>                 <span class="cmt"># ELF information</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">checksec Output — What it Means</div>
+        <table class="cmd-table">
+          <tr><th>Flag</th><th>Meaning for exploitation</th></tr>
+          <tr><td class="tcmd">NX enabled</td><td class="tdesc">Stack not executable → need ROP, not shellcode</td></tr>
+          <tr><td class="tcmd">Canary found</td><td class="tdesc">Must leak or brute-force canary for stack overflow</td></tr>
+          <tr><td class="tcmd">PIE enabled</td><td class="tdesc">Binary base is randomized → need leak to know addresses</td></tr>
+          <tr><td class="tcmd">ASLR</td><td class="tdesc">Heap/stack/libc randomized → need leaks</td></tr>
+          <tr><td class="tcmd">RELRO Full</td><td class="tdesc">GOT is read-only → can't overwrite GOT entries</td></tr>
+          <tr><td class="tcmd">No PIE, No Canary, No NX</td><td class="tdesc">Classic ret2shellcode — easy day</td></tr>
+        </table>
+      </div>
+
+      <div class="challenge">
+        <div class="challenge-header" onclick="toggleChallenge(this)">
+          <div class="challenge-header-left">
+            <span class="challenge-icon">⚡</span>
+            <div>
+              <div class="challenge-title-text">Final Challenge: Find the Buffer Overflow Offset</div>
+              <div class="challenge-tag">Capstone · 20 min</div>
+            </div>
+          </div>
+          <span class="challenge-toggle">▼ expand</span>
+        </div>
+        <div class="challenge-body">
+          <div class="challenge-q">
+            Compile (NO stack protection, NO PIE):<br>
+            <code>gcc -m64 -fno-stack-protector -no-pie -o vuln vuln.c</code><br>
+            with: <code>void win(){puts("you got it");} void vuln(){char buf[64]; gets(buf);} int main(){vuln();}</code><br><br>
+            1. <code>checksec</code> — verify no canary, no PIE<br>
+            2. In pwndbg: <code>r &lt;&lt;&lt; $(cyclic 200)</code> — crash it<br>
+            3. Note the value in <code>$rsp</code> after crash<br>
+            4. <code>cyclic -l VALUE_IN_RSP</code> — get the offset<br>
+            5. Find the address of <code>win</code>: <code>p win</code><br>
+            6. Craft: <code>python3 -c 'import sys; sys.stdout.buffer.write(b"A"*OFFSET + WIN_ADDR_LITTLE_ENDIAN)'</code><br>
+            7. <code>r &lt;&lt;&lt; YOUR_PAYLOAD</code> — did it jump to win?<br><br>
+            <strong>This is the complete GDB-assisted pwn workflow. Congratulations.</strong>
+          </div>
+          <div class="challenge-hint">
+            <button class="hint-toggle" onclick="toggleHint(this)">▶ show hint</button>
+            <div class="hint-body">
+              <span class="hcmd">checksec</span> → Canary: No, NX: enabled (that's fine, we're ret2win)<br>
+              <span class="hcmd">r &lt;&lt;&lt; $(cyclic 200)</span> → crash<br>
+              <span class="hcmd">cyclic -l $rsp</span> → offset (probably 72 for 64-byte buf + 8 for saved rbp)<br>
+              <span class="hcmd">p win</span> → e.g. 0x401136<br>
+              payload: <span class="hcmd">python3 -c 'import sys; sys.stdout.buffer.write(b"A"*72 + b"\x36\x11\x40\x00\x00\x00\x00\x00")'</span><br>
+              <span class="hcmd">r &lt;&lt;&lt; PAYLOAD</span>
+            </div>
+          </div>
+          <button class="done-btn" onclick="markDone(this, 11)">Mark as done ✓</button>
+        </div>
+      </div>
+
+      <div class="nav-row">
+        <button class="nav-btn" onclick="goLesson(10)">← prev</button>
+        <button class="nav-btn" style="border-color:var(--green);color:var(--green);background:var(--green-dim)" disabled>🎉 Tutorial Complete</button>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- CHEATSHEET -->
+<div class="cheatsheet-toggle" onclick="toggleCS()">Quick Ref</div>
+<div class="cheatsheet-panel" id="csPanel">
+  <div class="cs-section">
+    <div class="cs-section-title">Launch</div>
+    <div class="cs-row"><span class="cs-cmd">gdb -q ./bin</span><span class="cs-desc">quiet launch</span></div>
+    <div class="cs-row"><span class="cs-cmd">r / r arg1</span><span class="cs-desc">run / run with args</span></div>
+    <div class="cs-row"><span class="cs-cmd">q</span><span class="cs-desc">quit</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Breakpoints</div>
+    <div class="cs-row"><span class="cs-cmd">b main</span><span class="cs-desc">break at symbol</span></div>
+    <div class="cs-row"><span class="cs-cmd">b *0x401234</span><span class="cs-desc">break at address</span></div>
+    <div class="cs-row"><span class="cs-cmd">tb main</span><span class="cs-desc">temporary breakpoint</span></div>
+    <div class="cs-row"><span class="cs-cmd">i b</span><span class="cs-desc">list breakpoints</span></div>
+    <div class="cs-row"><span class="cs-cmd">d 1</span><span class="cs-desc">delete bp #1</span></div>
+    <div class="cs-row"><span class="cs-cmd">condition 1 $rax==0</span><span class="cs-desc">conditional bp</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Execution</div>
+    <div class="cs-row"><span class="cs-cmd">c</span><span class="cs-desc">continue</span></div>
+    <div class="cs-row"><span class="cs-cmd">n / ni</span><span class="cs-desc">next line / instruction</span></div>
+    <div class="cs-row"><span class="cs-cmd">s / si</span><span class="cs-desc">step into (line / instr)</span></div>
+    <div class="cs-row"><span class="cs-cmd">fin</span><span class="cs-desc">finish current function</span></div>
+    <div class="cs-row"><span class="cs-cmd">until *0xaddr</span><span class="cs-desc">run to address</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Registers</div>
+    <div class="cs-row"><span class="cs-cmd">i r</span><span class="cs-desc">all registers</span></div>
+    <div class="cs-row"><span class="cs-cmd">p/x $rax</span><span class="cs-desc">print reg as hex</span></div>
+    <div class="cs-row"><span class="cs-cmd">set $rax = 0</span><span class="cs-desc">modify register</span></div>
+    <div class="cs-row"><span class="cs-cmd">set $eflags|=0x40</span><span class="cs-desc">set zero flag</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Memory (x command)</div>
+    <div class="cs-row"><span class="cs-cmd">x/s $rdi</span><span class="cs-desc">string at rdi</span></div>
+    <div class="cs-row"><span class="cs-cmd">x/20xg $rsp</span><span class="cs-desc">20 qwords of stack</span></div>
+    <div class="cs-row"><span class="cs-cmd">x/5i $rip</span><span class="cs-desc">next 5 instructions</span></div>
+    <div class="cs-row"><span class="cs-cmd">x/xg $rbp+8</span><span class="cs-desc">return address</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Disassembly</div>
+    <div class="cs-row"><span class="cs-cmd">disas main</span><span class="cs-desc">disassemble function</span></div>
+    <div class="cs-row"><span class="cs-cmd">disas /r main</span><span class="cs-desc">with raw bytes</span></div>
+    <div class="cs-row"><span class="cs-cmd">layout asm</span><span class="cs-desc">TUI assembly view</span></div>
+    <div class="cs-row"><span class="cs-cmd">layout regs</span><span class="cs-desc">add register pane</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Stack</div>
+    <div class="cs-row"><span class="cs-cmd">bt</span><span class="cs-desc">backtrace</span></div>
+    <div class="cs-row"><span class="cs-cmd">frame N</span><span class="cs-desc">select frame</span></div>
+    <div class="cs-row"><span class="cs-cmd">info locals</span><span class="cs-desc">local variables</span></div>
+    <div class="cs-row"><span class="cs-cmd">info args</span><span class="cs-desc">function args</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Modifying</div>
+    <div class="cs-row"><span class="cs-cmd">set {int}addr=val</span><span class="cs-desc">write to memory</span></div>
+    <div class="cs-row"><span class="cs-cmd">set $rip=0xaddr</span><span class="cs-desc">jump to address</span></div>
+    <div class="cs-row"><span class="cs-cmd">return 0</span><span class="cs-desc">force function return</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">Search</div>
+    <div class="cs-row"><span class="cs-cmd">find s,e,"str"</span><span class="cs-desc">find string in range</span></div>
+    <div class="cs-row"><span class="cs-cmd">info proc mappings</span><span class="cs-desc">memory map</span></div>
+  </div>
+  <div class="cs-section">
+    <div class="cs-section-title">pwndbg extras</div>
+    <div class="cs-row"><span class="cs-cmd">checksec</span><span class="cs-desc">security mitigations</span></div>
+    <div class="cs-row"><span class="cs-cmd">telescope $rsp</span><span class="cs-desc">smart stack dump</span></div>
+    <div class="cs-row"><span class="cs-cmd">vmmap</span><span class="cs-desc">memory map</span></div>
+    <div class="cs-row"><span class="cs-cmd">cyclic 100</span><span class="cs-desc">generate pattern</span></div>
+    <div class="cs-row"><span class="cs-cmd">cyclic -l $rsp</span><span class="cs-desc">find offset</span></div>
+    <div class="cs-row"><span class="cs-cmd">heap / bins</span><span class="cs-desc">heap inspection</span></div>
+  </div>
+</div>
+
+<script>
+let currentLesson = 0;
+const totalLessons = 12;
+const doneLessons = new Set();
+const csOpenState = false;
+
+function goLesson(n) {
+  document.querySelector('.lesson-content.active')?.classList.remove('active');
+  document.getElementById(`lesson-${n}`)?.classList.add('active');
+
+  document.querySelector('.lesson-btn.active')?.classList.remove('active');
+  document.querySelector(`[data-lesson="${n}"]`)?.classList.add('active');
+
+  currentLesson = n;
+  document.querySelector('.main').scrollTop = 0;
+}
+
+function toggleChallenge(header) {
+  const body = header.nextElementSibling;
+  const toggle = header.querySelector('.challenge-toggle');
+  body.classList.toggle('open');
+  toggle.textContent = body.classList.contains('open') ? '▲ collapse' : '▼ expand';
+}
+
+function toggleHint(btn) {
+  const body = btn.nextElementSibling;
+  body.classList.toggle('open');
+  btn.textContent = body.classList.contains('open') ? '▼ hide hint' : '▶ show hint';
+}
+
+function markDone(btn, lessonIdx) {
+  btn.classList.toggle('marked');
+  if (btn.classList.contains('marked')) {
+    btn.textContent = '✓ Done!';
+    doneLessons.add(lessonIdx);
+    document.querySelector(`[data-lesson="${lessonIdx}"]`)?.classList.add('done');
+  } else {
+    btn.textContent = 'Mark as done ✓';
+    doneLessons.delete(lessonIdx);
+    document.querySelector(`[data-lesson="${lessonIdx}"]`)?.classList.remove('done');
+  }
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = Math.round((doneLessons.size / totalLessons) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('lessonCounter').textContent = `${doneLessons.size}/${totalLessons}`;
+}
+
+let csOpen = false;
+function toggleCS() {
+  csOpen = !csOpen;
+  document.getElementById('csPanel').classList.toggle('open', csOpen);
+}
+
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('.code-body').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  });
+}
+</script>
+</body>
+</html>
