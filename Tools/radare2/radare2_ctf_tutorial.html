@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radare2 for CTF</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Outfit:wght@400;600;700;900&display=swap');
+
+:root {
+  --bg:       #07090d;
+  --bg2:      #0c0f15;
+  --bg3:      #111620;
+  --bg4:      #182030;
+  --border:   #1c2535;
+  --border2:  #253348;
+  --teal:     #2dd4bf;
+  --teal-dim: #2dd4bf18;
+  --teal-glow:#2dd4bf35;
+  --orange:   #fb923c;
+  --orange-dim:#fb923c18;
+  --pink:     #f472b6;
+  --pink-dim: #f472b615;
+  --blue:     #60a5fa;
+  --blue-dim: #60a5fa15;
+  --green:    #4ade80;
+  --green-dim:#4ade8015;
+  --yellow:   #facc15;
+  --yellow-dim:#facc1518;
+  --text:     #cbd5e1;
+  --text-mid: #7a90a8;
+  --text-low: #3d5166;
+  --mono:     'Fira Code', monospace;
+  --sans:     'Outfit', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOPBAR */
+.topbar {
+  height: 50px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: var(--teal-dim);
+  border: 1px solid var(--teal);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--teal);
+  font-weight: 900;
+  font-family: var(--sans);
+}
+.logo-name {
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--teal);
+  letter-spacing: -0.5px;
+}
+.topbar-sep { color: var(--border2); font-size: 16px; }
+.topbar-sub { color: var(--text-mid); font-size: 11.5px; }
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.prog-label { color: var(--text-low); font-size: 10.5px; }
+.prog-track {
+  width: 140px; height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  background: var(--teal);
+  border-radius: 2px;
+  box-shadow: 0 0 6px var(--teal);
+  transition: width .4s ease;
+}
+.prog-count { color: var(--teal); font-size: 10.5px; font-weight: 600; }
+
+/* SHELL */
+.shell { display:flex; flex:1; overflow:hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 210px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 12px 0 20px;
+}
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.sb-section {
+  padding: 8px 16px 4px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-low);
+  font-weight: 600;
+  margin-top: 8px;
+}
+.sb-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-mid);
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s;
+  line-height: 1.4;
+}
+.sb-btn:hover { background: var(--teal-dim); color: var(--text); }
+.sb-btn.active { background: var(--teal-dim); color: var(--teal); border-left-color: var(--teal); }
+.sb-btn .num { color: var(--text-low); font-size: 9.5px; width: 16px; flex-shrink:0; }
+.sb-btn.active .num { color: var(--teal); }
+.sb-btn .ck { margin-left:auto; color: var(--teal); font-size:10px; display:none; }
+.sb-btn.done .ck { display:block; }
+
+/* MAIN */
+.main {
+  flex:1;
+  overflow-y: auto;
+  padding: 0;
+  position: relative;
+}
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* LESSON */
+.lesson { display:none; }
+.lesson.active { display:block; }
+
+/* HERO */
+.hero {
+  padding: 26px 34px 22px;
+  background: linear-gradient(135deg, var(--bg2), var(--bg3));
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.hero::after {
+  content: attr(data-glyph);
+  position: absolute;
+  right: 30px; top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 72px;
+  color: var(--border);
+  user-select: none;
+  line-height: 1;
+}
+.hero-eyebrow {
+  font-size: 9.5px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--teal);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.hero-title {
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 22px;
+  color: #f0f8ff;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+.hero-desc {
+  color: var(--text-mid);
+  font-size: 12.5px;
+  max-width: 580px;
+  line-height: 1.85;
+}
+.hero-pills { display:flex; gap:7px; flex-wrap:wrap; margin-top:12px; }
+.pill {
+  font-size: 9.5px;
+  padding: 2px 9px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  color: var(--text-low);
+  font-family: var(--mono);
+}
+
+/* BODY */
+.body { padding: 26px 34px; }
+.sec { margin-bottom: 26px; }
+.sec-title {
+  font-size: 9.5px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--text-low);
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* CODE */
+.code-blk {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 9px 0;
+}
+.code-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 13px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 9.5px;
+  color: var(--text-low);
+}
+.lang { color: var(--teal); font-weight: 600; letter-spacing: .5px; }
+.cp-btn {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--text-low);
+  transition: color .2s;
+}
+.cp-btn:hover { color: var(--teal); }
+.code-body {
+  padding: 13px 17px;
+  background: var(--bg);
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 2;
+}
+.code-body::-webkit-scrollbar { height: 3px; }
+.code-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* syntax */
+.kw   { color: var(--pink); }
+.fn   { color: var(--blue); }
+.str  { color: var(--green); }
+.num  { color: var(--orange); }
+.cmt  { color: var(--text-low); font-style: italic; }
+.cmd  { color: var(--teal); }
+.flag { color: var(--orange); }
+.addr { color: var(--blue); }
+.out  { color: var(--text-mid); }
+.hl   { color: var(--yellow); font-weight: 600; }
+.r2p  { color: var(--teal); }   /* r2 prompt */
+
+/* BOXES */
+.box {
+  border-radius: 5px;
+  padding: 11px 15px;
+  margin: 10px 0;
+  font-size: 12.5px;
+  line-height: 1.85;
+}
+.box .lbl {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.box.tip  { background:var(--teal-dim);   border-left: 3px solid var(--teal); }
+.box.tip  .lbl { color: var(--teal); }
+.box.warn { background:var(--yellow-dim); border-left: 3px solid var(--yellow); }
+.box.warn .lbl { color: var(--yellow); }
+.box.note { background:var(--blue-dim);   border-left: 3px solid var(--blue); }
+.box.note .lbl { color: var(--blue); }
+.box.goal { background:var(--green-dim);  border-left: 3px solid var(--green); }
+.box.goal .lbl { color: var(--green); }
+
+/* COMMAND TABLE */
+.cmd-tbl { width:100%; border-collapse:collapse; margin:8px 0; }
+.cmd-tbl th {
+  padding: 6px 13px;
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-low);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-weight: 600;
+}
+.cmd-tbl td {
+  padding: 7px 13px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11.5px;
+  vertical-align: top;
+}
+.cmd-tbl tr:last-child td { border-bottom: none; }
+.cmd-tbl tr:hover td { background: var(--teal-dim); }
+.tc { color: var(--teal); }
+.td { color: var(--text-mid); }
+
+/* CHALLENGE */
+.chal {
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  overflow: hidden;
+  margin: 18px 0;
+}
+.chal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  background: var(--orange-dim);
+  border-bottom: 1px solid var(--border2);
+  cursor: pointer;
+  user-select: none;
+}
+.chal-left { display:flex; align-items:center; gap:10px; }
+.chal-icon { color: var(--orange); font-size: 13px; }
+.chal-name { color: var(--orange); font-size: 11.5px; font-weight: 600; }
+.chal-tag  { color: var(--orange); font-size: 9px; letter-spacing:1px; text-transform:uppercase; opacity:.7; }
+.chal-arrow { color: var(--text-mid); font-size: 10px; transition: transform .2s; }
+.chal-body {
+  padding: 16px;
+  background: var(--bg3);
+  display: none;
+}
+.chal-body.open { display: block; }
+.chal-q { color: var(--text); font-size: 12.5px; line-height: 1.9; margin-bottom: 12px; }
+
+.hint-wrap {
+  border: 1px dashed var(--border2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+.hint-tog {
+  width: 100%;
+  padding: 7px 13px;
+  background: none;
+  border: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-mid);
+  cursor: pointer;
+  text-align: left;
+  transition: color .2s;
+}
+.hint-tog:hover { color: var(--text); }
+.hint-body {
+  padding: 11px 15px;
+  background: var(--bg2);
+  border-top: 1px dashed var(--border2);
+  color: var(--text-mid);
+  font-size: 11.5px;
+  line-height: 1.85;
+  display: none;
+}
+.hint-body.open { display: block; }
+.hc { color: var(--teal); }
+
+.done-btn {
+  margin-top: 12px;
+  padding: 7px 18px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text-mid);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.done-btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+.done-btn.marked { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+
+/* NAV */
+.nav-row {
+  display: flex;
+  gap: 10px;
+  padding: 22px 34px 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+.nbtn {
+  padding: 9px 20px;
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text-mid);
+  transition: all .2s;
+}
+.nbtn:hover { border-color: var(--teal); color: var(--teal); }
+.nbtn.p { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); font-weight: 600; }
+.nbtn.p:hover { background: var(--teal); color: #000; }
+.nbtn:disabled { opacity:.3; cursor:not-allowed; }
+
+/* CHEATSHEET PANEL */
+.cs-tab {
+  position: fixed;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  padding: 13px 5px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  font-size: 9.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--teal);
+  cursor: pointer;
+  z-index: 100;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.cs-panel {
+  position: fixed;
+  right: -300px; top: 50px; bottom: 0;
+  width: 300px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 99;
+  transition: right .3s ease;
+  padding: 18px 0;
+}
+.cs-panel.open { right: 0; }
+.cs-panel::-webkit-scrollbar { width: 3px; }
+.cs-panel::-webkit-scrollbar-thumb { background: var(--border2); }
+.cs-group { margin-bottom: 18px; }
+.cs-grp-title {
+  padding: 6px 16px;
+  font-size: 8.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--teal);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3px;
+}
+.cs-row { display:flex; gap:8px; padding: 4px 16px; align-items:baseline; }
+.cs-cmd { color: var(--teal); font-size: 11px; white-space:nowrap; min-width: 110px; }
+.cs-desc { color: var(--text-mid); font-size: 10.5px; line-height: 1.5; }
+
+/* inline */
+code {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--teal);
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">r2</div>
+    <span class="logo-name">radare2</span>
+  </div>
+  <span class="topbar-sep">·</span>
+  <span class="topbar-sub">CTF field guide — analyse · patch · exploit</span>
+  <div class="topbar-right">
+    <span class="prog-label">progress</span>
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <span class="prog-count" id="progCount">0/12</span>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-section">Foundations</div>
+  <button class="sb-btn active" data-n="0" onclick="go(0)"><span class="num">01</span>Opening Binaries<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="1" onclick="go(1)"><span class="num">02</span>Navigation & Flags<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="2" onclick="go(2)"><span class="num">03</span>Analysis (aa / aaa)<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="3" onclick="go(3)"><span class="num">04</span>Disassembly (pdf)<span class="ck">✓</span></button>
+
+  <div class="sb-section">Memory & Data</div>
+  <button class="sb-btn" data-n="4" onclick="go(4)"><span class="num">05</span>Reading Memory (px)<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="5" onclick="go(5)"><span class="num">06</span>Strings & Search<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="6" onclick="go(6)"><span class="num">07</span>Debugging (ood / dc)<span class="ck">✓</span></button>
+
+  <div class="sb-section">Power Features</div>
+  <button class="sb-btn" data-n="7" onclick="go(7)"><span class="num">08</span>Patching Binaries<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="8" onclick="go(8)"><span class="num">09</span>Visual Mode (V)<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="9" onclick="go(9)"><span class="num">10</span>Scripting & r2pipe<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="10" onclick="go(10)"><span class="num">11</span>Cutter (GUI)<span class="ck">✓</span></button>
+  <button class="sb-btn" data-n="11" onclick="go(11)"><span class="num">12</span>CTF Workflow<span class="ck">✓</span></button>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainArea">
+
+<!-- ======================================================= -->
+<!-- LESSON 0: Opening Binaries                              -->
+<!-- ======================================================= -->
+<div class="lesson active" id="l0">
+  <div class="hero" data-glyph="r2">
+    <div class="hero-eyebrow">Lesson 01 · Foundations</div>
+    <div class="hero-title">Opening Binaries</div>
+    <div class="hero-desc">Radare2's command language looks intimidating at first — everything is abbreviated. Once you see the pattern, it clicks fast. This lesson covers launching, modes, and the fundamental command structure.</div>
+    <div class="hero-pills"><span class="pill">r2 launch</span><span class="pill">write mode</span><span class="pill">radare2 -A</span><span class="pill">quit</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">⚙ Installation</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Option A: package manager (older version, fine for learning)</span>
+<span class="cmd">sudo apt install radare2</span>
+
+<span class="cmt"># Option B: build from source (always latest)</span>
+<span class="cmd">git clone https://github.com/radareorg/radare2</span>
+<span class="cmd">cd radare2 && sys/install.sh</span>
+
+<span class="cmt"># Verify</span>
+<span class="cmd">r2 -v</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🚀 Launching r2</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">r2 ./binary</span>             <span class="cmt"># Open for analysis (read-only by default)</span>
+<span class="cmd">r2 -A ./binary</span>          <span class="cmt"># Open AND auto-analyze (like 'aaa' on entry)</span>
+<span class="cmd">r2 -w ./binary</span>          <span class="cmt"># Open in WRITE mode (needed for patching)</span>
+<span class="cmd">r2 -d ./binary</span>          <span class="cmt"># Open in DEBUG mode (like gdb)</span>
+<span class="cmd">r2 -d -A ./binary</span>       <span class="cmt"># Debug + auto-analyze</span>
+<span class="cmd">r2 -</span>                    <span class="cmt"># Open without a file (for scripting)</span>
+
+<span class="cmt"># With arguments (for debug mode):</span>
+<span class="cmd">r2 -d ./binary arg1 arg2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🧠 Command Structure — The Core Pattern</div>
+      <div class="box tip">
+        <div class="lbl">💡 How r2 Commands Work</div>
+        Every command follows: <strong>verb + noun + modifier</strong>. Example: <code>pdf</code> = <strong>p</strong>rint <strong>d</strong>isassembly of <strong>f</strong>unction. Append <code>?</code> to anything for help: <code>p?</code> shows all print commands. <code>pd?</code> narrows it. This is the key to r2's entire CLI.
+      </div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 command anatomy</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># p  = print family</span>
+<span class="cmt"># pd = print disassembly</span>
+<span class="cmt"># pdf = print disassembly of function</span>
+<span class="cmt"># pdfs = print disassembly of function (summary)</span>
+
+<span class="cmt"># a  = analysis family</span>
+<span class="cmt"># aa = analyze all</span>
+<span class="cmt"># aaa = analyze all (deeper)</span>
+<span class="cmt"># af = analyze function</span>
+<span class="cmt"># afi = analyze function info</span>
+
+<span class="cmt"># s  = seek (move current position)</span>
+<span class="cmt"># s main → seek to main</span>
+<span class="cmt"># s 0x401000 → seek to address</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📋 Essential First Commands</div>
+      <table class="cmd-tbl">
+        <tr><th>Command</th><th>What it does</th></tr>
+        <tr><td class="tc">?</td><td class="td">Show help (top level)</td></tr>
+        <tr><td class="tc">q</td><td class="td">Quit r2</td></tr>
+        <tr><td class="tc">q!</td><td class="td">Quit without confirmation</td></tr>
+        <tr><td class="tc">!ls</td><td class="td">Run shell command (! prefix = shell)</td></tr>
+        <tr><td class="tc">!!ls</td><td class="td">Run shell command and capture output</td></tr>
+        <tr><td class="tc">e??</td><td class="td">List all config variables (there are hundreds)</td></tr>
+        <tr><td class="tc">e asm.syntax=intel</td><td class="td">Switch to Intel syntax (do this first!)</td></tr>
+        <tr><td class="tc">e asm.comments=true</td><td class="td">Show comments in disassembly</td></tr>
+      </table>
+      <div class="box tip">
+        <div class="lbl">~/.radare2rc — your config file</div>
+        Create <code>~/.radare2rc</code> with settings that auto-load every session:<br>
+        <code>e asm.syntax=intel</code><br>
+        <code>e asm.bytes=false</code><br>
+        <code>e scr.utf8=true</code>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 01: Get r2 Talking</div><div class="chal-tag">warmup · 5 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile any C binary (e.g. <code>int main(){return 0;}</code>) and:<br><br>
+          1. Open it with <code>r2 ./binary</code><br>
+          2. Set Intel syntax: <code>e asm.syntax=intel</code><br>
+          3. Type <code>i</code> — what info does it show?<br>
+          4. Type <code>iI</code> — what's different?<br>
+          5. Type <code>i?</code> — how many subcommands does <code>i</code> have?<br>
+          6. Try <code>iS</code> — what does it show?<br>
+          7. <strong>Bonus:</strong> create <code>~/.radare2rc</code> with your preferred settings and verify they load on next launch.
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">i</span> = binary info (arch, bits, type, OS)<br>
+            <span class="hc">iI</span> = security flags (canary, nx, pic, relocs)<br>
+            <span class="hc">i?</span> → shows: ih, ii, iI, il, iS, is, iz, iz~FLAG etc.<br>
+            <span class="hc">iS</span> = sections (.text .data .bss etc.)<br>
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,0)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" disabled>← prev</button>
+      <button class="nbtn p" onclick="go(1)">Next: Navigation & Flags →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 1: Navigation & Flags                            -->
+<!-- ======================================================= -->
+<div class="lesson" id="l1">
+  <div class="hero" data-glyph="s">
+    <div class="hero-eyebrow">Lesson 02 · Foundations</div>
+    <div class="hero-title">Navigation & Flags</div>
+    <div class="hero-desc">In r2, your "cursor" is the current seek position. Everything you do operates at the seek position. Flags are r2's bookmarks — named labels on addresses. Understanding both is fundamental.</div>
+    <div class="hero-pills"><span class="pill">s (seek)</span><span class="pill">flags</span><span class="pill">f command</span><span class="pill">afl</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🧭 Seeking (Moving the Cursor)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">s</span>                        <span class="cmt"># Show current position (address)</span>
+<span class="cmd">s main</span>                   <span class="cmt"># Seek to symbol 'main'</span>
+<span class="cmd">s 0x401000</span>               <span class="cmt"># Seek to absolute address</span>
+<span class="cmd">s+10</span>                     <span class="cmt"># Seek forward 10 bytes</span>
+<span class="cmd">s-10</span>                     <span class="cmt"># Seek back 10 bytes</span>
+<span class="cmd">s$$</span>                      <span class="cmt"># Seek to current position (no-op, for scripts)</span>
+<span class="cmd">s-</span>                       <span class="cmt"># Undo seek (go back)</span>
+<span class="cmd">s+</span>                       <span class="cmt"># Redo seek (go forward)</span>
+<span class="cmd">s sym.win</span>                <span class="cmt"># Seek to a flag named 'win'</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🚩 Flags (r2's Bookmark System)</div>
+      <div class="box note">
+        <div class="lbl">What are Flags?</div>
+        After analysis, r2 creates flags for every symbol, string, function, import, export. <code>sym.main</code>, <code>str.hello_world</code>, <code>fcn.00401000</code>, <code>imp.puts</code>. You can also create your own. They're the primary way to refer to addresses by name.
+      </div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">f</span>                        <span class="cmt"># List all flags</span>
+<span class="cmd">f~main</span>                   <span class="cmt"># Filter flags containing "main" (~ = grep)</span>
+<span class="cmd">f~str.</span>                   <span class="cmt"># All string flags</span>
+<span class="cmd">f~sym.</span>                   <span class="cmt"># All symbol flags</span>
+<span class="cmd">f~imp.</span>                   <span class="cmt"># All import flags</span>
+<span class="cmd">f myflag @ 0x401234</span>      <span class="cmt"># Create a flag at address</span>
+<span class="cmd">f- myflag</span>                <span class="cmt"># Delete a flag</span>
+<span class="cmd">fl</span>                       <span class="cmt"># List flags with lengths</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📋 Listing Functions, Symbols, Imports</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — after running aa or aaa</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">afl</span>                      <span class="cmt"># list ALL analyzed functions (addr, size, name)</span>
+<span class="cmd">afl~main</span>                 <span class="cmt"># grep for "main" in function list</span>
+<span class="cmd">afl | sort -k3</span>           <span class="cmt"># pipe to shell sort</span>
+<span class="cmd">afl~[0]</span>                  <span class="cmt"># just addresses (column 0)</span>
+<span class="cmd">is</span>                       <span class="cmt"># list symbols (from symbol table)</span>
+<span class="cmd">is~FUNC</span>                  <span class="cmt"># filter to functions only</span>
+<span class="cmd">ii</span>                       <span class="cmt"># list imports (libc functions used)</span>
+<span class="cmd">ie</span>                       <span class="cmt"># entry point(s)</span>
+<span class="cmd">iz</span>                       <span class="cmt"># strings in data section</span>
+<span class="cmd">izz</span>                      <span class="cmt"># strings across ENTIRE binary</span>
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">⚡ Grep Everything with ~</div>
+        The <code>~</code> operator is r2's built-in grep. <code>afl~win</code> finds any function with "win" in the name. <code>iz~flag</code> finds any string containing "flag". Add <code>~[0]</code> to extract column 0, <code>~[1]</code> for column 1. Combine: <code>afl~win[0]</code> = just the address of win.
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 02: Navigate a Stripped Binary</div><div class="chal-tag">10 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile stripped: <code>gcc -s -O1 -o stripped binary.c</code><br><br>
+          1. Open with <code>r2 -A ./stripped</code><br>
+          2. List all functions with <code>afl</code> — no named ones, just <code>fcn.XXXXXXXX</code><br>
+          3. List imports with <code>ii</code> — what libc functions does it call?<br>
+          4. Find strings with <code>iz</code><br>
+          5. If you see a suspicious string, seek to it: <code>s str.&lt;name&gt;</code> and print with <code>ps</code><br>
+          6. Use <code>axt @ str.&lt;name&gt;</code> — find what function references that string<br>
+          7. <strong>Bonus:</strong> Use <code>izz~flag</code> — search for "flag" in ALL strings across the binary
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">r2 -A ./stripped</span> → auto-analyzes<br>
+            <span class="hc">afl</span> → functions (fcn.XXXXX)<br>
+            <span class="hc">ii</span> → imports (puts, scanf, strcmp etc.)<br>
+            <span class="hc">iz</span> → strings in .rodata<br>
+            <span class="hc">axt @ str.something</span> → cross-references (who calls this)
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,1)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(0)">← prev</button>
+      <button class="nbtn p" onclick="go(2)">Next: Analysis →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 2: Analysis                                       -->
+<!-- ======================================================= -->
+<div class="lesson" id="l2">
+  <div class="hero" data-glyph="aa">
+    <div class="hero-eyebrow">Lesson 03 · Foundations</div>
+    <div class="hero-title">Analysis (aa / aaa)</div>
+    <div class="hero-desc">r2 doesn't analyze a binary automatically — you ask for it. The analysis depth is configurable. Too little and you miss functions; too much and it's slow. Here's how to get it right.</div>
+    <div class="hero-pills"><span class="pill">aa / aaa</span><span class="pill">af</span><span class="pill">xrefs</span><span class="pill">call graph</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🔬 Analysis Commands</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">aa</span>                       <span class="cmt"># Analyze all — quick, finds obvious functions</span>
+<span class="cmd">aaa</span>                      <span class="cmt"># Analyze all + extra passes (recommended for CTF)</span>
+<span class="cmd">aaaa</span>                     <span class="cmt"># Maximum analysis — slow but thorough</span>
+<span class="cmd">af</span>                       <span class="cmt"># Analyze function at current seek position</span>
+<span class="cmd">af @ 0x401000</span>            <span class="cmt"># Analyze function at specific address</span>
+<span class="cmd">afr</span>                      <span class="cmt"># Analyze function recursively (follows calls)</span>
+<span class="cmd">afl</span>                      <span class="cmt"># List all known functions (after analysis)</span>
+<span class="cmd">afi</span>                      <span class="cmt"># Info about current function</span>
+<span class="cmd">afn new_name</span>             <span class="cmt"># Rename current function</span>
+<span class="cmd">afn new_name @ 0x401000</span>  <span class="cmt"># Rename function at address</span>
+        </div>
+      </div>
+      <div class="box warn">
+        <div class="lbl">⚠ Run aaa Before Anything</div>
+        If you open a binary and <code>pdf</code> shows nothing or garbage, it's because you haven't analyzed yet. Always run <code>aaa</code> (or use <code>r2 -A</code>) before exploring. Stripped binaries especially need it to find function boundaries.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔗 Cross-References (xrefs)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — xrefs are CTF gold</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">axt</span>                      <span class="cmt"># xrefs TO current address (who calls/uses me?)</span>
+<span class="cmd">axt @ sym.win</span>            <span class="cmt"># Who calls win()?</span>
+<span class="cmd">axf</span>                      <span class="cmt"># xrefs FROM current address (what do I call?)</span>
+<span class="cmd">axf @ sym.main</span>           <span class="cmt"># What does main() call?</span>
+<span class="cmd">axt @ str.password</span>       <span class="cmt"># Which function references "password" string?</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📊 Binary Info & Security Flags</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — recon commands</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">i</span>                        <span class="cmt"># General binary info (arch, bits, OS, type)</span>
+<span class="cmd">iI</span>                       <span class="cmt"># Security: canary, nx, pic, relocs, stripped</span>
+<span class="cmd">iS</span>                       <span class="cmt"># Sections (.text, .data, .bss with perms)</span>
+<span class="cmd">iS~rwx</span>                   <span class="cmt"># Find executable+writable sections</span>
+<span class="cmd">ii</span>                       <span class="cmt"># Imports (libc calls)</span>
+<span class="cmd">ie</span>                       <span class="cmt"># Entry point</span>
+<span class="cmd">ir</span>                       <span class="cmt"># Relocations (GOT entries)</span>
+<span class="cmd">iz</span>                       <span class="cmt"># Strings in data section</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 03: Profile a CTF Binary</div><div class="chal-tag">10 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>void win(){puts("flag!");} int main(){char b[32];gets(b);}</code><br><br>
+          1. Open with <code>r2 ./binary</code> (no -A)<br>
+          2. Try <code>afl</code> — does it find any functions?<br>
+          3. Now run <code>aaa</code> and try <code>afl</code> again<br>
+          4. Check security: <code>iI</code> — note canary, nx, pic values<br>
+          5. Find all strings: <code>iz</code><br>
+          6. Find what calls <code>puts</code>: <code>axt @ sym.imp.puts</code><br>
+          7. Rename the auto-named function to something meaningful: <code>afn my_win @ ADDRESS</code><br>
+          8. <strong>Bonus:</strong> use <code>axf @ sym.main</code> to see what main calls
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            Before <span class="hc">aaa</span>: afl shows nothing or just entry0<br>
+            After <span class="hc">aaa</span>: afl shows main, win, entry0, __libc_start_main...<br>
+            <span class="hc">iI</span> → canary: false, nx: true, pic: false<br>
+            <span class="hc">iz</span> → "flag!" string at some address<br>
+            <span class="hc">axt @ sym.imp.puts</span> → called from win()
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,2)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(1)">← prev</button>
+      <button class="nbtn p" onclick="go(3)">Next: Disassembly (pdf) →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 3: Disassembly (pdf)                             -->
+<!-- ======================================================= -->
+<div class="lesson" id="l3">
+  <div class="hero" data-glyph="pdf">
+    <div class="hero-eyebrow">Lesson 04 · Foundations</div>
+    <div class="hero-title">Disassembly — pdf, pd, pdc</div>
+    <div class="hero-desc">The <code>p</code> (print) family is your most-used command set. <code>pdf</code> is the workhorse: disassemble an entire function with arrows, xrefs, and comments. Here's everything you need to read code in r2.</div>
+    <div class="hero-pills"><span class="pill">pdf</span><span class="pill">pd N</span><span class="pill">pdc</span><span class="pill">VV graph</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🔎 Disassembly Commands</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">pdf</span>                      <span class="cmt"># Disassemble entire current function</span>
+<span class="cmd">pdf @ main</span>              <span class="cmt"># Disassemble main (from anywhere)</span>
+<span class="cmd">pdf @ sym.win</span>           <span class="cmt"># Disassemble win()</span>
+<span class="cmd">pd 20</span>                    <span class="cmt"># Disassemble 20 instructions from current pos</span>
+<span class="cmd">pd 20 @ 0x401000</span>        <span class="cmt"># 20 instructions from address</span>
+<span class="cmd">pdi</span>                      <span class="cmt"># Disassemble without metadata (cleaner output)</span>
+<span class="cmd">pdfs</span>                     <span class="cmt"># Function disassembly summary (just calls)</span>
+<span class="cmd">pdc</span>                      <span class="cmt"># Pseudo-C decompilation (basic but useful)</span>
+<span class="cmd">pdc @ sym.main</span>           <span class="cmt"># Decompile main to C-like code</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📍 Reading pdf Output</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">example pdf output</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="out">            ;-- main:</span>
+<span class="addr">/ (fcn) sym.main 68</span>
+<span class="out">|   int sym.main ();</span>
+<span class="out">|           ; var int local_8h @ rbp-0x8</span>
+<span class="out">|           ; var char *local_40h @ rbp-0x40</span>
+<span class="out">|           0x00401156      push  rbp</span>
+<span class="out">|           0x00401157      mov   rbp, rsp</span>
+<span class="addr">|           0x0040115a      lea   rdi, str.Enter_password</span>
+<span class="out">|           0x00401161      call  sym.imp.puts</span>
+<span class="addr">|           0x00401166      lea   rdi, [rbp - 0x40]</span>
+<span class="out">|           0x0040116a      call  sym.imp.gets</span>
+<span class="addr">|           0x0040116f      cmp   dword [rbp - 0x8], 0x1337   </span><span class="cmt">; &lt;-- comparison!</span>
+<span class="addr">|       ,=&lt; 0x00401176      jne   0x401180</span>
+<span class="addr">|       |   0x00401178      call  sym.win</span>
+<span class="addr">|       `-> 0x00401180      xor   eax, eax</span>
+<span class="out">\           0x00401182      pop   rbp</span>
+
+<span class="cmt"># Arrows show control flow visually</span>
+<span class="cmt"># ,=&lt; is a forward jump, `-> is where it lands</span>
+<span class="cmt"># str.* flags are auto-resolved strings</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🗺 Call Graph</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">agc @ sym.main</span>           <span class="cmt"># Call graph from main (text)</span>
+<span class="cmd">agcd @ sym.main</span>          <span class="cmt"># Call graph as dot format (for graphviz)</span>
+<span class="cmd">VV</span>                       <span class="cmt"># Enter visual graph mode (interactive)</span>
+<span class="cmt"># In VV mode: arrow keys to scroll, q to quit, p to cycle layouts</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 04: Reverse the Logic</div><div class="chal-tag">15 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile stripped: <code>gcc -s -O1 -no-pie -o rev rev.c</code> with:<br>
+          <code>int check(char*s){return s[0]=='r'&amp;&amp;s[1]=='2'&amp;&amp;s[2]=='!';}  int main(){char b[32];scanf("%s",b);if(check(b))puts("win");else puts("lose");}</code><br><br>
+          1. Open with <code>r2 -A ./rev</code><br>
+          2. <code>pdf @ main</code> — find the call to check<br>
+          3. Seek to check: <code>s sym.check</code> or the fcn.XXXXX address<br>
+          4. <code>pdf</code> — read the comparison logic. What's the password?<br>
+          5. Try <code>pdc</code> at check — does the pseudo-C help?<br>
+          6. <strong>Bonus:</strong> Enter <code>VV</code> graph mode at main — navigate with arrow keys
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">pdf @ main</span> → find call to check function<br>
+            <span class="hc">s fcn.XXXXXX</span> → seek to check<br>
+            <span class="hc">pdf</span> → see cmp byte [rdi], 0x72 ('r'), then 0x32 ('2'), then 0x21 ('!')<br>
+            Password: <span class="hc">r2!</span><br>
+            <span class="hc">pdc</span> → shows if/else structure
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,3)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(2)">← prev</button>
+      <button class="nbtn p" onclick="go(4)">Next: Reading Memory →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 4: Reading Memory (px)                           -->
+<!-- ======================================================= -->
+<div class="lesson" id="l4">
+  <div class="hero" data-glyph="px">
+    <div class="hero-eyebrow">Lesson 05 · Memory</div>
+    <div class="hero-title">Reading Memory — px, pf, p commands</div>
+    <div class="hero-desc">The <code>px</code> family dumps raw memory in hex. <code>pf</code> lets you define structs and read formatted data. Essential for understanding data layouts and finding hidden values.</div>
+    <div class="hero-pills"><span class="pill">px / pxw / pxq</span><span class="pill">p8</span><span class="pill">pf</span><span class="pill">pv</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">💾 px — Hex Dump Family</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">px</span>                       <span class="cmt"># Hex dump at current position (default 16 bytes)</span>
+<span class="cmd">px 64</span>                    <span class="cmt"># Hex dump 64 bytes</span>
+<span class="cmd">px 64 @ 0x401000</span>        <span class="cmt"># 64 bytes at address</span>
+<span class="cmd">pxw 64</span>                   <span class="cmt"># Hex dump as 4-byte words</span>
+<span class="cmd">pxq 64</span>                   <span class="cmt"># Hex dump as 8-byte qwords (64-bit)</span>
+<span class="cmd">pxa 64</span>                   <span class="cmt"># Annotated hex dump (resolves pointers)</span>
+<span class="cmd">p8 16</span>                    <span class="cmt"># Raw bytes as hex string (no formatting)</span>
+<span class="cmd">pxr 64</span>                   <span class="cmt"># Dump with pointer references resolved (like telescope)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📖 Print Strings & Values</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">ps</span>                       <span class="cmt"># Print string at current position</span>
+<span class="cmd">ps @ 0x402010</span>           <span class="cmt"># Print string at address</span>
+<span class="cmd">psz</span>                      <span class="cmt"># Print null-terminated string</span>
+<span class="cmd">pv</span>                       <span class="cmt"># Print value (pointer size int)</span>
+<span class="cmd">pv4</span>                      <span class="cmt"># Print 4-byte int</span>
+<span class="cmd">pv8</span>                      <span class="cmt"># Print 8-byte int</span>
+<span class="cmd">? 0x41414141</span>             <span class="cmt"># Evaluate/convert: hex→dec, dec→hex etc.</span>
+<span class="cmd">? 0x41</span>                   <span class="cmt"># Shows char, decimal, hex, binary all at once</span>
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">💡 The ? Command</div>
+        The <code>?</code> expression evaluator is incredibly handy: <code>? 0x401000 + 0x50</code> computes offsets. <code>? 'A'</code> shows all representations of 'A'. <code>? rip</code> shows current rip in debug mode. Use it constantly for quick arithmetic.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🏗 pf — Formatted Print (Structs)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">pf</span>                       <span class="cmt"># Show format specifiers help</span>
+<span class="cmd">pf i</span>                     <span class="cmt"># Print 4-byte int at cursor</span>
+<span class="cmd">pf q</span>                     <span class="cmt"># Print 8-byte qword</span>
+<span class="cmd">pf s</span>                     <span class="cmt"># Print string pointer</span>
+<span class="cmd">pf iis</span>                   <span class="cmt"># Print struct: int, int, string ptr</span>
+<span class="cmd">pf 4i</span>                    <span class="cmt"># Print array of 4 ints</span>
+<span class="cmd">pf b</span>                     <span class="cmt"># Print as binary</span>
+
+<span class="cmt"># Example: reading a struct {int id; int score; char* name;}</span>
+<span class="cmd">pf iis @ 0x601040</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 05: Read the Hidden Data</div><div class="chal-tag">10 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>int secret=0x13371337; char msg[]="r2_hidden"; int main(){return 0;}</code><br><br>
+          1. <code>r2 -A ./binary</code><br>
+          2. Find sections: <code>iS</code> — note the .data section address<br>
+          3. Seek to .data: <code>s section..data</code><br>
+          4. <code>px 64</code> — can you see <code>0x13371337</code> and the string?<br>
+          5. Use <code>pv4</code> at the secret address — does it show the value?<br>
+          6. Use <code>? 0x13371337</code> — what are all the representations?<br>
+          7. <strong>Bonus:</strong> use <code>pxr 64 @ section..data</code> — how is it different?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">iS</span> → find .data section address<br>
+            <span class="hc">s section..data</span> (note double dot)<br>
+            <span class="hc">px 64</span> → see 37 13 37 13 in little-endian, then 72 32 5f... ("r2_hidden")<br>
+            <span class="hc">pxr</span> → annotated, resolves symbols and strings inline
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,4)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(3)">← prev</button>
+      <button class="nbtn p" onclick="go(5)">Next: Strings & Search →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 5: Strings & Search                              -->
+<!-- ======================================================= -->
+<div class="lesson" id="l5">
+  <div class="hero" data-glyph="/">
+    <div class="hero-eyebrow">Lesson 06 · Memory</div>
+    <div class="hero-title">Strings & Searching Memory</div>
+    <div class="hero-desc">Finding strings, patterns, and specific byte sequences. In CTFs this is how you locate flags stored in memory, find hardcoded keys, and track down interesting data without reading every byte manually.</div>
+    <div class="hero-pills"><span class="pill">iz / izz</span><span class="pill">/ search</span><span class="pill">/x bytes</span><span class="pill">/R gadgets</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">📝 String Enumeration</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">iz</span>                       <span class="cmt"># Strings in data section (.rodata/.data)</span>
+<span class="cmd">izz</span>                      <span class="cmt"># Strings in ENTIRE binary (slower but thorough)</span>
+<span class="cmd">iz~flag</span>                  <span class="cmt"># Filter strings containing "flag"</span>
+<span class="cmd">iz~CTF{</span>                  <span class="cmt"># Find flag format</span>
+<span class="cmd">iz~[1]</span>                   <span class="cmt"># Print only addresses (column 1)</span>
+<span class="cmd">iz~[2]</span>                   <span class="cmt"># Print only the strings (column 2)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔍 Memory Search (/ command)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">/ hello</span>                  <span class="cmt"># Search for string "hello" in memory</span>
+<span class="cmd">/x 90</span>                   <span class="cmt"># Search for byte 0x90 (NOP)</span>
+<span class="cmd">/x 90909090</span>             <span class="cmt"># Search for NOP sled</span>
+<span class="cmd">/x 41424344</span>             <span class="cmt"># Search for "ABCD" as bytes</span>
+<span class="cmd">/w 0x1337</span>               <span class="cmt"># Search for 4-byte value 0x1337</span>
+<span class="cmd">/q 0x4141414141414141</span>   <span class="cmt"># Search for 8-byte value</span>
+<span class="cmd">/i hello</span>                 <span class="cmt"># Case-insensitive string search</span>
+<span class="cmd">/r 0x401000</span>             <span class="cmt"># Search for references to address 0x401000</span>
+
+<span class="cmt"># Set search range first (faster, less noise):</span>
+<span class="cmd">e search.in=dbg.maps</span>    <span class="cmt"># Search in all debug maps</span>
+<span class="cmd">e search.in=section.text</span> <span class="cmt"># Search only in .text</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🧩 ROP Gadget Search</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — ROP with /R</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">/R pop rdi</span>              <span class="cmt"># Find "pop rdi; ret" gadgets</span>
+<span class="cmd">/R pop rdi; ret</span>         <span class="cmt"># More specific search</span>
+<span class="cmd">/R ret</span>                  <span class="cmt"># All ret gadgets (for alignment)</span>
+<span class="cmd">/R jmp rsp</span>              <span class="cmt"># Find jmp rsp (for stack pivots)</span>
+<span class="cmd">/Rj pop rdi</span>             <span class="cmt"># Output as JSON</span>
+
+<span class="cmt"># Alternative: use the ROP chain builder</span>
+<span class="cmd">rop</span>                      <span class="cmt"># Show available ROP gadgets (after analysis)</span>
+<span class="cmd">rop~pop rdi</span>              <span class="cmt"># Filter ROP gadgets</span>
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">💡 ROP Workflow in r2</div>
+        <code>/R pop rdi</code> searches for the byte sequence of "pop rdi; ret" across the entire binary. Much faster than ROPgadget for quick lookups. The result shows the address — use that directly in your exploit.
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 06: Find the Key</div><div class="chal-tag">10 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>char key[]="sup3rs3cr3t"; char flag[]="CTF{r2_search_win}"; int main(){char b[32];scanf("%s",b);if(!strcmp(b,key))puts(flag);}</code><br><br>
+          1. <code>r2 -A ./binary</code><br>
+          2. <code>iz</code> — find both strings<br>
+          3. Seek to the key string: <code>s str.sup3rs3cr3t</code><br>
+          4. <code>ps</code> — print it<br>
+          5. <code>axt @ str.sup3rs3cr3t</code> — which function references it?<br>
+          6. Search for the CTF flag pattern: <code>/ CTF{</code><br>
+          7. <strong>Bonus:</strong> In a binary compiled without -g, use <code>/ /bin/sh</code> to find the /bin/sh string libc maps into memory (requires running first with <code>-d</code>)
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">iz</span> → shows both strings with addresses<br>
+            <span class="hc">s str.sup3rs3cr3t</span> then <span class="hc">ps</span><br>
+            <span class="hc">axt @ str.sup3rs3cr3t</span> → main or some check function<br>
+            <span class="hc">/ CTF{</span> → finds flag location
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,5)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(4)">← prev</button>
+      <button class="nbtn p" onclick="go(6)">Next: Debugging →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 6: Debugging                                     -->
+<!-- ======================================================= -->
+<div class="lesson" id="l6">
+  <div class="hero" data-glyph="d">
+    <div class="hero-eyebrow">Lesson 07 · Debugging</div>
+    <div class="hero-title">Debugging — ood, dc, dr, db</div>
+    <div class="hero-desc">r2 has a built-in debugger. Not as polished as GDB but powerful — especially combined with analysis. Same workflow: break, step, inspect registers and memory.</div>
+    <div class="hero-pills"><span class="pill">r2 -d</span><span class="pill">db breakpoints</span><span class="pill">dc / dso / dsi</span><span class="pill">dr registers</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🐛 Starting Debug Mode</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell + r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Launch in debug mode:</span>
+<span class="cmd">r2 -d ./binary</span>
+<span class="cmd">r2 -d -A ./binary</span>        <span class="cmt"># Debug + analyze</span>
+
+<span class="cmt"># Already in r2? Reopen in debug:</span>
+<span class="cmd">ood</span>                       <span class="cmt"># Reopen in debug mode (with debug backend)</span>
+<span class="cmd">ood arg1 arg2</span>             <span class="cmt"># Reopen with arguments</span>
+<span class="cmd">oodf file</span>                 <span class="cmt"># Reopen with different binary</span>
+
+<span class="cmt"># Analyze after opening in debug:</span>
+<span class="cmd">dcu main</span>                  <span class="cmt"># Debug Continue Until main (faster than aaa + b main + dc)</span>
+<span class="cmd">aaa</span>                       <span class="cmt"># Now analyze (symbols are resolved)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">⏸ Breakpoints</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 debug</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">db sym.main</span>              <span class="cmt"># Breakpoint at main</span>
+<span class="cmd">db 0x401166</span>             <span class="cmt"># Breakpoint at address</span>
+<span class="cmd">db sym.imp.strcmp</span>        <span class="cmt"># Breakpoint at strcmp</span>
+<span class="cmd">db-</span>                      <span class="cmt"># Remove breakpoint at current position</span>
+<span class="cmd">db- 0x401166</span>            <span class="cmt"># Remove specific breakpoint</span>
+<span class="cmd">dbl</span>                      <span class="cmt"># List all breakpoints</span>
+<span class="cmd">dbe 0x401166</span>            <span class="cmt"># Enable breakpoint</span>
+<span class="cmd">dbd 0x401166</span>            <span class="cmt"># Disable breakpoint</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">▶ Execution Control</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 debug</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">dc</span>                       <span class="cmt"># Continue (until breakpoint or end)</span>
+<span class="cmd">dcu 0x401166</span>            <span class="cmt"># Continue Until address (no bp needed)</span>
+<span class="cmd">dcu sym.win</span>              <span class="cmt"># Continue until win()</span>
+<span class="cmd">ds</span>                       <span class="cmt"># Step into (one instruction)</span>
+<span class="cmd">dso</span>                      <span class="cmt"># Step over (skip calls)</span>
+<span class="cmd">dss</span>                      <span class="cmt"># Step skip (skip current instruction)</span>
+<span class="cmd">dcr</span>                      <span class="cmt"># Continue until ret (finish function)</span>
+<span class="cmd">dk 9</span>                     <span class="cmt"># Send signal 9 (SIGKILL) to process</span>
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">💡 dcu is your best friend</div>
+        <code>dcu main</code> runs straight to main, saving you from single-stepping through all the libc startup code. <code>dcu sym.imp.strcmp</code> runs to the next strcmp call. Fastest way to reach an interesting point.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📊 Registers & Memory in Debug</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 debug</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">dr</span>                       <span class="cmt"># Show all registers</span>
+<span class="cmd">dr rax</span>                   <span class="cmt"># Show specific register</span>
+<span class="cmd">dr rdi=0x1337</span>            <span class="cmt"># Set register value</span>
+<span class="cmd">dr rip=0x401150</span>          <span class="cmt"># Jump to address (set rip)</span>
+<span class="cmd">drs</span>                      <span class="cmt"># Show register state as diff (highlights changes)</span>
+<span class="cmd">drj</span>                      <span class="cmt"># Registers as JSON</span>
+
+<span class="cmt"># Memory in debug (same px commands, but live):</span>
+<span class="cmd">px 64 @ rsp</span>              <span class="cmt"># Dump 64 bytes of stack</span>
+<span class="cmd">pxr 64 @ rsp</span>             <span class="cmt"># Stack with pointer annotations</span>
+<span class="cmd">pxq 32 @ rsp</span>             <span class="cmt"># Stack as qwords</span>
+
+<span class="cmt"># Modify memory:</span>
+<span class="cmd">wx 90 @ rip</span>              <span class="cmt"># Write NOP at rip (requires -w or open writable)</span>
+<span class="cmd">wv 0x1337 @ rbp-8</span>        <span class="cmt"># Write value to address</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 07: Catch the strcmp</div><div class="chal-tag">15 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>int main(){char b[32];scanf("%s",b);if(!strcmp(b,"r2dbg_pass"))puts("win!");else puts("nope");}</code><br><br>
+          1. <code>r2 -d ./binary</code><br>
+          2. <code>dcu main</code> to reach main<br>
+          3. <code>aaa</code> to analyze<br>
+          4. <code>db sym.imp.strcmp</code> — breakpoint at strcmp<br>
+          5. <code>dc</code> and enter any input<br>
+          6. When stopped at strcmp: <code>dr rdi</code> and <code>dr rsi</code> — what are they?<br>
+          7. <code>ps @ rdi</code> and <code>ps @ rsi</code> — print the strings being compared<br>
+          8. <strong>Bonus:</strong> Use <code>dr rax=0</code> before strcmp returns to fake "equal" result, then <code>dc</code> — does it print win?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">r2 -d ./binary</span> → <span class="hc">dcu main</span> → <span class="hc">aaa</span><br>
+            <span class="hc">db sym.imp.strcmp</span> → <span class="hc">dc</span> → type "test"<br>
+            <span class="hc">dr rdi</span> → address of "test"<br>
+            <span class="hc">dr rsi</span> → address of "r2dbg_pass"<br>
+            <span class="hc">ps @ rsi</span> → "r2dbg_pass"<br>
+            After strcmp: <span class="hc">dr rax=0</span> (0 = strings equal in strcmp)
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,6)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(5)">← prev</button>
+      <button class="nbtn p" onclick="go(7)">Next: Patching →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 7: Patching                                      -->
+<!-- ======================================================= -->
+<div class="lesson" id="l7">
+  <div class="hero" data-glyph="wx">
+    <div class="hero-eyebrow">Lesson 08 · Power Features</div>
+    <div class="hero-title">Patching Binaries</div>
+    <div class="hero-desc">r2's write mode lets you modify the binary on disk — NOP out a check, change a jump direction, patch a comparison value. This is faster than scripting an exploit for simple CTF challenges.</div>
+    <div class="hero-pills"><span class="pill">r2 -w</span><span class="pill">wx / wa / wv</span><span class="pill">wao nop</span><span class="pill">patch in-place</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">✏️ Write Commands</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — open with r2 -w ./binary</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">wx 90</span>                    <span class="cmt"># Write 0x90 (NOP) at current position</span>
+<span class="cmd">wx 9090909090</span>            <span class="cmt"># Write 5 NOPs</span>
+<span class="cmd">wx 90 @ 0x401166</span>        <span class="cmt"># Write NOP at specific address</span>
+<span class="cmd">wv 0x1337 @ 0x601040</span>   <span class="cmt"># Write 4-byte value at address</span>
+<span class="cmd">wv8 0xdeadbeef @ addr</span>   <span class="cmt"># Write 8-byte value</span>
+<span class="cmd">w hello\x00 @ addr</span>      <span class="cmt"># Write string with null terminator</span>
+<span class="cmd">wz hello @ addr</span>          <span class="cmt"># Write null-terminated string</span>
+
+<span class="cmt"># Write assembly instruction directly:</span>
+<span class="cmd">wa nop @ 0x401166</span>       <span class="cmt"># Assemble "nop" and write it</span>
+<span class="cmd">wa jmp 0x401180 @ 0x401170</span>  <span class="cmt"># Patch a jump</span>
+<span class="cmd">wa xor eax,eax @ addr</span>   <span class="cmt"># Write xor eax,eax (set to 0)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔫 wao — One-Instruction Patchers</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — convenience commands for common patches</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">wao nop</span>                  <span class="cmt"># NOP the current instruction (handles variable sizes)</span>
+<span class="cmd">wao ret</span>                  <span class="cmt"># Replace instruction with ret</span>
+<span class="cmd">wao ret0</span>                 <span class="cmt"># Replace with: xor eax,eax; ret (return 0)</span>
+<span class="cmd">wao ret1</span>                 <span class="cmt"># Replace with: mov eax,1; ret (return 1)</span>
+<span class="cmd">wao jz</span>                   <span class="cmt"># Change jne/jnz to jz/je (flip jump)</span>
+<span class="cmd">wao jnz</span>                  <span class="cmt"># Change je/jz to jne/jnz</span>
+<span class="cmd">wao trap</span>                 <span class="cmt"># Replace with int3 (breakpoint)</span>
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">⚡ Most Common CTF Patches</div>
+        1. <strong>Bypass check:</strong> seek to the <code>jne</code> after a comparison, then <code>wao nop</code> or <code>wao jz</code> to flip it.<br>
+        2. <strong>Skip a function:</strong> seek to the call, <code>wao nop</code> until the call is gone.<br>
+        3. <strong>Force return value:</strong> seek to function start, <code>wao ret1</code>.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">💾 Saving Changes</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Changes in -w mode are written to disk IMMEDIATELY</span>
+<span class="cmt"># Make a backup first!</span>
+<span class="cmd">!cp ./binary ./binary.bak</span>   <span class="cmt"># Shell command from within r2</span>
+
+<span class="cmt"># To patch a copy without touching the original:</span>
+<span class="cmd">!cp ./binary ./binary_patched</span>
+<span class="cmd">r2 -w ./binary_patched</span>      <span class="cmt"># Open the copy</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 08: Three Ways to Bypass</div><div class="chal-tag">15 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>int check(){return 0;} int main(){if(check())puts("win!");else puts("nope");}</code><br><br>
+          Method A — flip the jump:<br>
+          1. <code>r2 -A ./binary</code>, <code>pdf @ main</code> — find the <code>jz</code>/<code>je</code> after calling check<br>
+          2. Copy binary: <code>!cp ./binary ./patched</code><br>
+          3. Reopen in write mode: <code>r2 -w -A ./patched</code><br>
+          4. Seek to the jump instruction: <code>s 0x&lt;jmp_addr&gt;</code><br>
+          5. <code>wao jnz</code> — flip je→jne<br>
+          6. Exit and run: <code>!./patched</code><br><br>
+          Method B — patch check() to return 1:<br>
+          7. Seek to check, <code>wao ret1</code><br><br>
+          Method C — NOP the jz:<br>
+          8. Seek to the jz, <code>wao nop</code> (may need multiple times for 6-byte jump)
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">pdf @ main</span> → see: call check; test eax,eax; je 0x...<br>
+            Seek to je: <span class="hc">s 0x&lt;je_addr&gt;</span><br>
+            <span class="hc">wao jnz</span> → changes je to jne<br>
+            For method B: <span class="hc">s sym.check</span> → <span class="hc">wao ret1</span><br>
+            <span class="hc">!./patched</span> → should print "win!"
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,7)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(6)">← prev</button>
+      <button class="nbtn p" onclick="go(8)">Next: Visual Mode →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 8: Visual Mode                                   -->
+<!-- ======================================================= -->
+<div class="lesson" id="l8">
+  <div class="hero" data-glyph="V">
+    <div class="hero-eyebrow">Lesson 09 · Power Features</div>
+    <div class="hero-title">Visual Mode & Graph Mode</div>
+    <div class="hero-desc">r2's visual modes give you an interactive, ncurses-style UI inside the terminal. Graph mode shows control flow visually. Once you get the keybindings, you'll use it constantly for navigation.</div>
+    <div class="hero-pills"><span class="pill">V visual</span><span class="pill">VV graph</span><span class="pill">Vp panels</span><span class="pill">keybindings</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">👁 Visual Mode (V)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 → V to enter, q to exit</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">V</span>                        <span class="cmt"># Enter visual mode (hex view by default)</span>
+<span class="cmt"># Inside visual mode keybindings:</span>
+<span class="out">p / P    </span><span class="cmt"># Cycle through display modes (hex, disasm, debug...)</span>
+<span class="out">j / k    </span><span class="cmt"># Scroll down / up</span>
+<span class="out">J / K    </span><span class="cmt"># Big scroll</span>
+<span class="out">g        </span><span class="cmt"># Go to address (prompts)</span>
+<span class="out">_        </span><span class="cmt"># Open flag/function picker (type to filter)</span>
+<span class="out">:        </span><span class="cmt"># Enter r2 command (run any r2 cmd from visual)</span>
+<span class="out">q        </span><span class="cmt"># Quit visual mode</span>
+<span class="out">d        </span><span class="cmt"># Define (name) things at cursor</span>
+<span class="out">c        </span><span class="cmt"># Cursor mode (navigate byte by byte)</span>
+<span class="out">i        </span><span class="cmt"># Insert mode (write bytes)</span>
+<span class="out">x        </span><span class="cmt"># Show xrefs at cursor</span>
+<span class="out">n        </span><span class="cmt"># Rename flag at cursor</span>
+<span class="out">/        </span><span class="cmt"># Search within visual</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🕸 Graph Mode (VV)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 → VV to enter</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">VV</span>                       <span class="cmt"># Graph view of current function</span>
+<span class="cmd">VV @ sym.main</span>           <span class="cmt"># Graph view of main (from anywhere)</span>
+
+<span class="cmt"># Inside VV keybindings:</span>
+<span class="out">arrow keys  </span><span class="cmt"># Scroll/pan the graph</span>
+<span class="out">tab         </span><span class="cmt"># Jump to next node</span>
+<span class="out">hjkl        </span><span class="cmt"># vim-style panning</span>
+<span class="out">p           </span><span class="cmt"># Cycle graph layout algorithms</span>
+<span class="out">+  /  -     </span><span class="cmt"># Zoom in / out</span>
+<span class="out">g           </span><span class="cmt"># Go to address</span>
+<span class="out">_           </span><span class="cmt"># Open function picker</span>
+<span class="out">.           </span><span class="cmt"># Center graph on current node</span>
+<span class="out">q           </span><span class="cmt"># Quit</span>
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">💡 VV is for Control Flow</div>
+        When you see a spaghetti function with lots of branches in <code>pdf</code>, switch to <code>VV</code>. The graph shows the CFG (control flow graph) visually — basic blocks as nodes, jumps as edges. Jump targets are highlighted. Green = taken, red = not taken (for conditional jumps).
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🪟 Panels Mode (Vp)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — multi-pane layout</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">Vp</span>                       <span class="cmt"># Open panels mode (split-screen)</span>
+<span class="cmt"># Shows: disassembly + registers + stack simultaneously</span>
+<span class="cmt"># Keybindings:</span>
+<span class="out">Tab         </span><span class="cmt"># Switch between panels</span>
+<span class="out">X           </span><span class="cmt"># Close current panel</span>
+<span class="out">|           </span><span class="cmt"># Split panel vertically</span>
+<span class="out">-           </span><span class="cmt"># Split panel horizontally</span>
+<span class="out">M           </span><span class="cmt"># Toggle menu</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 09: Navigate Visually</div><div class="chal-tag">10 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Take any binary with a few branches and loops.<br><br>
+          1. Open with <code>r2 -A ./binary</code><br>
+          2. Seek to main: <code>s main</code><br>
+          3. Enter visual mode: <code>V</code>, then press <code>p</code> to cycle to disassembly view<br>
+          4. Press <code>_</code> — type "main" in the picker, select it<br>
+          5. Press <code>q</code>, then enter <code>VV</code> — explore the graph<br>
+          6. Press <code>p</code> multiple times in VV to see different layout algorithms<br>
+          7. Press <code>tab</code> to jump between basic blocks<br>
+          8. <strong>Bonus:</strong> press <code>:</code> inside visual mode and run <code>pdf</code> — it shows inline
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">V</span> → <span class="hc">p</span> (cycle) → disasm view shows arrows like pdf<br>
+            <span class="hc">_</span> → function search picker<br>
+            <span class="hc">VV</span> → graph, <span class="hc">p</span> changes layout (dagre, dot, etc.)<br>
+            <span class="hc">tab</span> moves focus between CFG nodes<br>
+            <span class="hc">:</span> then <span class="hc">pdf</span> runs pdf inline in visual
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,8)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(7)">← prev</button>
+      <button class="nbtn p" onclick="go(9)">Next: Scripting →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 9: Scripting & r2pipe                            -->
+<!-- ======================================================= -->
+<div class="lesson" id="l9">
+  <div class="hero" data-glyph="r2p">
+    <div class="hero-eyebrow">Lesson 10 · Power Features</div>
+    <div class="hero-title">Scripting & r2pipe</div>
+    <div class="hero-desc">Automate anything in r2 with shell scripts, r2 batch mode, or the r2pipe Python API. Perfect for CTFs where you need to automate decryption, XOR brute-force, or repeated analysis steps.</div>
+    <div class="hero-pills"><span class="pill">r2 -q -c</span><span class="pill">r2pipe Python</span><span class="pill">r2 scripts</span><span class="pill">rabin2 / rasm2</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">⚡ Quick One-liners</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Run r2 command non-interactively:</span>
+<span class="cmd">r2 -q -c 'aaa; pdf @ main' ./binary</span>
+<span class="cmd">r2 -q -c 'iI' ./binary</span>           <span class="cmt"># Security flags without opening shell</span>
+<span class="cmd">r2 -q -c 'iz' ./binary</span>           <span class="cmt"># All strings, no interaction</span>
+<span class="cmd">r2 -q -c 'aaa; afl' ./binary</span>    <span class="cmt"># List functions</span>
+
+<span class="cmt"># Chain commands with semicolons:</span>
+<span class="cmd">r2 -q -c 'aaa; s main; pdf' ./binary</span>
+
+<span class="cmt"># Pipe output to grep:</span>
+<span class="cmd">r2 -q -c 'aaa; iz' ./binary | grep -i flag</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🐍 r2pipe — Python API</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">install</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmd">pip install r2pipe</span>
+        </div>
+      </div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">python3 — r2pipe basics</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="kw">import</span> r2pipe
+<span class="kw">import</span> json
+
+r2 = r2pipe.open(<span class="str">"./binary"</span>)
+
+<span class="cmt"># cmd() returns output as string</span>
+r2.cmd(<span class="str">"aaa"</span>)
+output = r2.cmd(<span class="str">"afl"</span>)
+<span class="kw">print</span>(output)
+
+<span class="cmt"># cmdj() returns output as parsed JSON (use for structured data)</span>
+functions = r2.cmdj(<span class="str">"aflj"</span>)     <span class="cmt"># j suffix = JSON output</span>
+<span class="kw">for</span> f <span class="kw">in</span> functions:
+    <span class="kw">print</span>(f[<span class="str">"name"</span>], hex(f[<span class="str">"offset"</span>]))
+
+<span class="cmt"># Seek and read bytes</span>
+r2.cmd(<span class="str">"s main"</span>)
+bytes_at_main = r2.cmd(<span class="str">"p8 32"</span>)   <span class="cmt"># 32 bytes as hex string</span>
+<span class="kw">print</span>(bytes.fromhex(bytes_at_main))
+
+<span class="cmt"># Read memory as int</span>
+val = r2.cmdj(<span class="str">"pv4j @ 0x401000"</span>)
+<span class="kw">print</span>(hex(val))
+
+r2.quit()
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🛠 CLI Companion Tools</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell — r2 suite tools</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># rabin2: binary metadata without entering r2</span>
+<span class="cmd">rabin2 -I ./binary</span>       <span class="cmt"># Security info (canary, nx, pic)</span>
+<span class="cmd">rabin2 -z ./binary</span>       <span class="cmt"># Strings</span>
+<span class="cmd">rabin2 -s ./binary</span>       <span class="cmt"># Symbols</span>
+<span class="cmd">rabin2 -i ./binary</span>       <span class="cmt"># Imports</span>
+
+<span class="cmt"># rasm2: assemble/disassemble from CLI</span>
+<span class="cmd">rasm2 "nop"</span>              <span class="cmt"># → 90</span>
+<span class="cmd">rasm2 "pop rdi; ret"</span>     <span class="cmt"># → bytes of that gadget</span>
+<span class="cmd">rasm2 -d 90</span>              <span class="cmt"># Disassemble byte 0x90</span>
+<span class="cmd">rasm2 -d 5f c3</span>           <span class="cmt"># Disassemble "pop rdi; ret"</span>
+
+<span class="cmt"># rahash2: hash/crypto operations</span>
+<span class="cmd">rahash2 -a md5 -s "hello"</span>
+<span class="cmd">rahash2 -a sha256 ./binary</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 10: Automate a XOR Scan</div><div class="chal-tag">15 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile a binary with an XOR-encoded string:<br>
+          <code>// key = 42, "CTF{xor_me}" XOR 42 stored as bytes<br>
+          char enc[] = {0x69,0x7e,0x6c,0x1b,0x5b,0x57,0x5b,0x4d,0x1b,0x6f,0x1d};<br>
+          int main(){char b[32];scanf("%s",b);/* decode and compare */}</code><br><br>
+          Using r2pipe Python:<br>
+          1. Open the binary with r2pipe<br>
+          2. <code>aaa</code> then find the enc array via <code>iz</code> or section scan<br>
+          3. Read the bytes with <code>p8 11 @ &lt;addr&gt;</code><br>
+          4. In Python, XOR each byte with 42 to decode<br>
+          5. Print the flag string<br>
+          6. <strong>Bonus:</strong> use <code>rasm2</code> to find the bytes of "pop rdi; ret" and verify with <code>/x</code> in r2
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <pre class="hc">import r2pipe
+r2 = r2pipe.open("./binary")
+r2.cmd("aaa")
+# find addr of enc
+addr = r2.cmd("afl~enc[0]").strip()
+raw = r2.cmd(f"p8 11 @ {addr}")
+decoded = bytes(b ^ 42 for b in bytes.fromhex(raw))
+print(decoded)</pre>
+            Rasm2: <span class="hc">rasm2 -a x86 -b 64 "pop rdi; ret"</span> → 5f c3<br>
+            Then in r2: <span class="hc">/x 5fc3</span>
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,9)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(8)">← prev</button>
+      <button class="nbtn p" onclick="go(10)">Next: Cutter GUI →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 10: Cutter                                       -->
+<!-- ======================================================= -->
+<div class="lesson" id="l10">
+  <div class="hero" data-glyph="GUI">
+    <div class="hero-eyebrow">Lesson 11 · Power Features</div>
+    <div class="hero-title">Cutter — The GUI Frontend</div>
+    <div class="hero-desc">Cutter is the official Qt-based GUI for radare2. Same power, but with a Ghidra-like interface. Decompiler, graph view, hex editor — all in one window. Great for when the CLI feels like too much friction.</div>
+    <div class="hero-pills"><span class="pill">Cutter</span><span class="pill">Ghidra decompiler</span><span class="pill">GUI graph</span><span class="pill">integrated r2</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">📥 Installation</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Download AppImage from: https://cutter.re</span>
+<span class="cmd">chmod +x Cutter-*.AppImage</span>
+<span class="cmd">./Cutter-*.AppImage ./binary</span>
+
+<span class="cmt"># OR via snap:</span>
+<span class="cmd">sudo snap install cutter</span>
+
+<span class="cmt"># Install Ghidra decompiler plugin (highly recommended):</span>
+<span class="cmt"># In Cutter: Edit → Preferences → Plugins → Install rz-ghidra</span>
+<span class="cmt"># OR from CLI:</span>
+<span class="cmd">r2pm -ci rz-ghidra</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🪟 Key Panels</div>
+      <table class="cmd-tbl">
+        <tr><th>Panel</th><th>What it shows</th><th>Shortcut</th></tr>
+        <tr><td class="tc">Disassembly</td><td class="td">Main disasm view with arrows and xrefs</td><td class="td">—</td></tr>
+        <tr><td class="tc">Decompiler</td><td class="td">Ghidra-quality C pseudocode (needs plugin)</td><td class="td">—</td></tr>
+        <tr><td class="tc">Graph</td><td class="td">Interactive CFG — same as VV but clickable</td><td class="td">—</td></tr>
+        <tr><td class="tc">Hex Editor</td><td class="td">Raw bytes with live edit</td><td class="td">—</td></tr>
+        <tr><td class="tc">Imports</td><td class="td">All imported libc functions</td><td class="td">—</td></tr>
+        <tr><td class="tc">Strings</td><td class="td">All strings — click to navigate</td><td class="td">—</td></tr>
+        <tr><td class="tc">r2 Console</td><td class="td">Full r2 CLI embedded in GUI</td><td class="td">Ctrl+`</td></tr>
+      </table>
+      <div class="box tip">
+        <div class="lbl">💡 Best CTF Workflow with Cutter</div>
+        Open binary → let it analyze → check Imports panel (what libc functions = what vulnerabilities) → check Strings panel → double-click interesting strings to navigate → right-click functions to rename → use Decompiler panel for complex logic → use r2 Console for power commands.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔌 r2 Console inside Cutter</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Cutter r2 Console — all r2 commands work here</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Everything from this tutorial works in the embedded console</span>
+<span class="cmd">pdf @ main</span>
+<span class="cmd">/R pop rdi</span>
+<span class="cmd">iz~flag</span>
+<span class="cmd">iI</span>
+<span class="cmt"># Results show in the console, navigation updates the GUI panels</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 11: Decompile and Understand</div><div class="chal-tag">10 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Take any moderately complex binary (at least 2-3 functions with conditionals).<br><br>
+          1. Open in Cutter<br>
+          2. In the Strings panel, find something interesting and double-click it<br>
+          3. In the Imports panel, look for <code>gets</code> or <code>scanf</code> — potential overflow<br>
+          4. Navigate to main via the Functions panel<br>
+          5. Switch between Graph view and Decompiler view<br>
+          6. In the r2 Console: run <code>afl~[0]</code> to get all function addresses<br>
+          7. <strong>Bonus:</strong> right-click a function in the graph and rename it to something meaningful
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            Strings panel → double-click → navigates both disasm and decompiler panels<br>
+            Imports panel → look for "gets", "scanf", "system", "execve"<br>
+            Rename: right-click node in graph → "Rename function"<br>
+            r2 Console: <span class="hc">afn new_name @ addr</span> also works
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,10)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(9)">← prev</button>
+      <button class="nbtn p" onclick="go(11)">Next: CTF Workflow →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================= -->
+<!-- LESSON 11: CTF Workflow                                  -->
+<!-- ======================================================= -->
+<div class="lesson" id="l11">
+  <div class="hero" data-glyph="pwn">
+    <div class="hero-eyebrow">Lesson 12 · Capstone</div>
+    <div class="hero-title">Full CTF Workflow</div>
+    <div class="hero-desc">Putting it all together. A systematic r2-powered approach to CTF binary challenges — from first open to solving. Covers both RE (reverse engineering) and pwn workflows.</div>
+    <div class="hero-pills"><span class="pill">full workflow</span><span class="pill">RE + pwn</span><span class="pill">r2 + pwntools</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🗺 RE (Crackme) Workflow</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 — systematic reversing</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">## Step 1: Recon</span>
+<span class="cmd">r2 -A ./crackme</span>
+<span class="cmd">iI</span>                       <span class="cmt"># Security flags: stripped? canary? pie?</span>
+<span class="cmd">ii</span>                       <span class="cmt"># Imports: strcmp? strcasecmp? MD5? → hints at check type</span>
+<span class="cmd">iz</span>                       <span class="cmt"># Strings: any obvious flags or passwords?</span>
+<span class="cmd">izz~CTF{</span>                 <span class="cmt"># Direct flag search</span>
+
+<span class="cmt">## Step 2: Find interesting functions</span>
+<span class="cmd">afl~check</span>                <span class="cmt"># Anything named "check"?</span>
+<span class="cmd">afl~win</span>                  <span class="cmt"># Any "win" function?</span>
+<span class="cmd">axt @ sym.imp.strcmp</span>     <span class="cmt"># Who calls strcmp?</span>
+<span class="cmd">axt @ str.Wrong</span>          <span class="cmt"># Who references "Wrong" string?</span>
+
+<span class="cmt">## Step 3: Read the check function</span>
+<span class="cmd">pdf @ fcn.found_above</span>   <span class="cmt"># Disassemble it</span>
+<span class="cmd">pdc @ fcn.found_above</span>   <span class="cmt"># Pseudo-C version</span>
+<span class="cmd">VV @ fcn.found_above</span>    <span class="cmt"># Graph for complex control flow</span>
+
+<span class="cmt">## Step 4: Debug to confirm</span>
+<span class="cmd">ood</span>                      <span class="cmt"># Reopen in debug</span>
+<span class="cmd">dcu sym.imp.strcmp</span>       <span class="cmt"># Run to strcmp</span>
+<span class="cmd">ps @ rdi</span>                 <span class="cmt"># Print what's being compared</span>
+<span class="cmd">ps @ rsi</span>                 <span class="cmt"># Print the expected value</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">💥 Pwn Workflow</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">r2 + pwntools</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">## Step 1: Protections</span>
+<span class="cmd">r2 -A ./pwn_chal</span>
+<span class="cmd">iI</span>                       <span class="cmt"># Canary? PIE? NX? RELRO?</span>
+
+<span class="cmt">## Step 2: Find the vuln</span>
+<span class="cmd">ii~gets\|scanf\|read\|fgets\|printf</span>   <span class="cmt"># Dangerous imports</span>
+<span class="cmd">axt @ sym.imp.gets</span>       <span class="cmt"># Where is gets called?</span>
+<span class="cmd">pdf @ sym.vuln</span>           <span class="cmt"># Read vulnerable function</span>
+
+<span class="cmt">## Step 3: Find win / gadgets</span>
+<span class="cmd">afl~win</span>                  <span class="cmt"># Any win function?</span>
+<span class="cmd">/R pop rdi ; ret</span>         <span class="cmt"># ROP gadgets</span>
+<span class="cmd">/ /bin/sh</span>                <span class="cmt"># Find /bin/sh string</span>
+
+<span class="cmt">## Step 4: Get key addresses</span>
+<span class="cmd">is~win</span>                   <span class="cmt"># win() address</span>
+<span class="cmd">is~main</span>                  <span class="cmt"># main() address</span>
+<span class="cmd">ir~puts</span>                  <span class="cmt"># puts@GOT address</span>
+
+<span class="cmt">## Step 5: Determine overflow offset (in r2 debug mode)</span>
+<span class="cmd">ood</span>
+<span class="cmd">dcu sym.vuln</span>
+<span class="cmd">px 128 @ rsp</span>             <span class="cmt"># Find buffer on stack</span>
+<span class="cmt"># use ragg2 De Bruijn pattern OR gdb cyclic</span>
+<span class="cmd">ragg2 -P 200 -r</span>          <span class="cmt"># Generate 200-byte cyclic pattern</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔑 Key r2 ↔ GDB Equivalents</div>
+      <table class="cmd-tbl">
+        <tr><th>GDB</th><th>r2 Equivalent</th></tr>
+        <tr><td class="tc">disas main</td><td class="td"><code>pdf @ main</code></td></tr>
+        <tr><td class="tc">b main / b *0x401000</td><td class="td"><code>db sym.main</code> / <code>db 0x401000</code></td></tr>
+        <tr><td class="tc">r / run</td><td class="td"><code>dc</code> (debug continue)</td></tr>
+        <tr><td class="tc">ni / nexti</td><td class="td"><code>dso</code> (step over)</td></tr>
+        <tr><td class="tc">si / stepi</td><td class="td"><code>ds</code> (step into)</td></tr>
+        <tr><td class="tc">finish</td><td class="td"><code>dcr</code> (continue until ret)</td></tr>
+        <tr><td class="tc">info registers</td><td class="td"><code>dr</code></td></tr>
+        <tr><td class="tc">p/x $rax</td><td class="td"><code>dr rax</code></td></tr>
+        <tr><td class="tc">x/20xg $rsp</td><td class="td"><code>pxq 160 @ rsp</code></td></tr>
+        <tr><td class="tc">x/s $rdi</td><td class="td"><code>ps @ rdi</code></td></tr>
+        <tr><td class="tc">set $rax = 0</td><td class="td"><code>dr rax=0</code></td></tr>
+        <tr><td class="tc">info proc mappings</td><td class="td"><code>dm</code></td></tr>
+        <tr><td class="tc">find start, end, "str"</td><td class="td"><code>/ str</code></td></tr>
+        <tr><td class="tc">checksec (pwndbg)</td><td class="td"><code>iI</code></td></tr>
+        <tr><td class="tc">cyclic 200 (pwndbg)</td><td class="td"><code>ragg2 -P 200 -r</code></td></tr>
+      </table>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="togChal(this)">
+        <div class="chal-left">
+          <span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Final Challenge: Full RE + Patch</div><div class="chal-tag">capstone · 20 min</div></div>
+        </div>
+        <span class="chal-arrow">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile stripped with PIE:<br>
+          <code>gcc -s -pie -fpie -fno-stack-protector -o final final.c</code><br>
+          with:<br>
+          <code>int v=0xdead; void win(){puts("r2_mastery");} int main(){char b[64];gets(b);if(v==0xcafe)win();}</code><br><br>
+          Approach A — Pure Reverse Engineering:<br>
+          1. <code>r2 -A ./final</code> → <code>iI</code> → what protections?<br>
+          2. <code>ii</code> → what functions are imported?<br>
+          3. <code>axt @ sym.imp.puts</code> → find win()<br>
+          4. <code>pdf @ fcn.win_addr</code> → confirm it prints the flag<br>
+          5. <code>pdf @ main</code> → understand the check: v must equal 0xcafe<br><br>
+          Approach B — Patch it:<br>
+          6. <code>!cp ./final ./final_p && r2 -w -A ./final_p</code><br>
+          7. Find the <code>cmp</code> instruction in main, patch to NOP or flip the jump<br>
+          8. <code>!./final_p &lt;&lt;&lt; test</code> — does it print "r2_mastery"?<br><br>
+          Approach C — Debug:<br>
+          9. <code>r2 -d -A ./final</code> → <code>dcu main</code><br>
+          10. Find v's address (<code>dr rsp</code> region), use <code>wv 0xcafe @ addr_of_v</code><br>
+          11. <code>dc</code> with any input → win!
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="togHint(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">iI</span> → stripped:true, pic:true (PIE), canary:false<br>
+            <span class="hc">ii</span> → imports: gets, puts<br>
+            <span class="hc">axt @ sym.imp.puts</span> → shows win function address<br>
+            <span class="hc">pdf @ main</span> → find: <code>cmp dword [var], 0xcafe</code> + <code>jne</code><br><br>
+            Patch: seek to jne → <span class="hc">wao nop</span> (twice if jne is 6 bytes)<br>
+            Debug: <span class="hc">dcu main</span> → find v on stack → <span class="hc">wv 0xcafe @ addr</span>
+          </div>
+        </div>
+        <button class="done-btn" onclick="markDone(this,11)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(10)">← prev</button>
+      <button class="nbtn" style="border-color:var(--teal);color:var(--teal);background:var(--teal-dim)" disabled>🎉 r2 Complete</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- CHEATSHEET -->
+<div class="cs-tab" onclick="togCS()">Cheat Sheet</div>
+<div class="cs-panel" id="csPanel">
+  <div class="cs-group">
+    <div class="cs-grp-title">Open / Info</div>
+    <div class="cs-row"><span class="cs-cmd">r2 -A ./bin</span><span class="cs-desc">open + analyze</span></div>
+    <div class="cs-row"><span class="cs-cmd">r2 -d ./bin</span><span class="cs-desc">open in debug</span></div>
+    <div class="cs-row"><span class="cs-cmd">r2 -w ./bin</span><span class="cs-desc">open writable</span></div>
+    <div class="cs-row"><span class="cs-cmd">iI</span><span class="cs-desc">security flags</span></div>
+    <div class="cs-row"><span class="cs-cmd">ii / ie / iS</span><span class="cs-desc">imports / entry / sections</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Analysis</div>
+    <div class="cs-row"><span class="cs-cmd">aaa</span><span class="cs-desc">full analysis</span></div>
+    <div class="cs-row"><span class="cs-cmd">afl</span><span class="cs-desc">list functions</span></div>
+    <div class="cs-row"><span class="cs-cmd">afn name</span><span class="cs-desc">rename function</span></div>
+    <div class="cs-row"><span class="cs-cmd">axt @ addr</span><span class="cs-desc">xrefs to addr</span></div>
+    <div class="cs-row"><span class="cs-cmd">axf @ addr</span><span class="cs-desc">xrefs from addr</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Navigate</div>
+    <div class="cs-row"><span class="cs-cmd">s main</span><span class="cs-desc">seek to main</span></div>
+    <div class="cs-row"><span class="cs-cmd">s 0x401000</span><span class="cs-desc">seek to address</span></div>
+    <div class="cs-row"><span class="cs-cmd">s- / s+</span><span class="cs-desc">undo / redo seek</span></div>
+    <div class="cs-row"><span class="cs-cmd">f~str.</span><span class="cs-desc">filter string flags</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Disassembly</div>
+    <div class="cs-row"><span class="cs-cmd">pdf</span><span class="cs-desc">disasm current fn</span></div>
+    <div class="cs-row"><span class="cs-cmd">pd 20</span><span class="cs-desc">20 instructions</span></div>
+    <div class="cs-row"><span class="cs-cmd">pdc</span><span class="cs-desc">pseudo-C decompile</span></div>
+    <div class="cs-row"><span class="cs-cmd">VV</span><span class="cs-desc">graph view</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Memory</div>
+    <div class="cs-row"><span class="cs-cmd">px 64</span><span class="cs-desc">hex dump 64 bytes</span></div>
+    <div class="cs-row"><span class="cs-cmd">pxq 64 @ rsp</span><span class="cs-desc">stack as qwords</span></div>
+    <div class="cs-row"><span class="cs-cmd">ps @ rdi</span><span class="cs-desc">string at rdi</span></div>
+    <div class="cs-row"><span class="cs-cmd">pv4 / pv8</span><span class="cs-desc">print 4/8 byte val</span></div>
+    <div class="cs-row"><span class="cs-cmd">? 0x41</span><span class="cs-desc">convert/evaluate</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Strings & Search</div>
+    <div class="cs-row"><span class="cs-cmd">iz / izz</span><span class="cs-desc">strings (section/all)</span></div>
+    <div class="cs-row"><span class="cs-cmd">/ hello</span><span class="cs-desc">search string</span></div>
+    <div class="cs-row"><span class="cs-cmd">/x 90</span><span class="cs-desc">search bytes</span></div>
+    <div class="cs-row"><span class="cs-cmd">/R pop rdi</span><span class="cs-desc">ROP gadgets</span></div>
+    <div class="cs-row"><span class="cs-cmd">cmd~pattern</span><span class="cs-desc">grep any output</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Debug</div>
+    <div class="cs-row"><span class="cs-cmd">dcu main</span><span class="cs-desc">run to main</span></div>
+    <div class="cs-row"><span class="cs-cmd">db addr</span><span class="cs-desc">set breakpoint</span></div>
+    <div class="cs-row"><span class="cs-cmd">dc / ds / dso</span><span class="cs-desc">continue/step/over</span></div>
+    <div class="cs-row"><span class="cs-cmd">dr / dr rax</span><span class="cs-desc">all/one register</span></div>
+    <div class="cs-row"><span class="cs-cmd">dr rax=0</span><span class="cs-desc">set register</span></div>
+    <div class="cs-row"><span class="cs-cmd">dcr</span><span class="cs-desc">run to return</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Patch</div>
+    <div class="cs-row"><span class="cs-cmd">wao nop</span><span class="cs-desc">NOP current instr</span></div>
+    <div class="cs-row"><span class="cs-cmd">wao jnz/jz</span><span class="cs-desc">flip jump</span></div>
+    <div class="cs-row"><span class="cs-cmd">wao ret1</span><span class="cs-desc">force return 1</span></div>
+    <div class="cs-row"><span class="cs-cmd">wa nop @ addr</span><span class="cs-desc">write asm</span></div>
+    <div class="cs-row"><span class="cs-cmd">wx 90 @ addr</span><span class="cs-desc">write raw bytes</span></div>
+  </div>
+  <div class="cs-group">
+    <div class="cs-grp-title">Scripting</div>
+    <div class="cs-row"><span class="cs-cmd">r2 -q -c 'cmd' ./b</span><span class="cs-desc">one-liner</span></div>
+    <div class="cs-row"><span class="cs-cmd">rabin2 -I ./b</span><span class="cs-desc">binary info (no r2)</span></div>
+    <div class="cs-row"><span class="cs-cmd">rasm2 "pop rdi"</span><span class="cs-desc">assemble to bytes</span></div>
+    <div class="cs-row"><span class="cs-cmd">r2pipe.open()</span><span class="cs-desc">Python API</span></div>
+  </div>
+</div>
+
+<script>
+let cur = 0;
+const total = 12;
+const done = new Set();
+let csOpen = false;
+
+function go(n) {
+  document.getElementById(`l${cur}`)?.classList.remove('active');
+  document.getElementById(`l${n}`)?.classList.add('active');
+  document.querySelector(`[data-n="${cur}"]`)?.classList.remove('active');
+  document.querySelector(`[data-n="${n}"]`)?.classList.add('active');
+  cur = n;
+  document.getElementById('mainArea').scrollTop = 0;
+}
+
+function togChal(hdr) {
+  const body = hdr.nextElementSibling;
+  const arrow = hdr.querySelector('.chal-arrow');
+  body.classList.toggle('open');
+  arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+function togHint(btn) {
+  const body = btn.nextElementSibling;
+  body.classList.toggle('open');
+  btn.textContent = body.classList.contains('open') ? '▼ hide hint' : '▶ show hint';
+}
+
+function markDone(btn, idx) {
+  btn.classList.toggle('marked');
+  if (btn.classList.contains('marked')) {
+    btn.textContent = '✓ Done!';
+    done.add(idx);
+    document.querySelector(`[data-n="${idx}"]`)?.classList.add('done');
+  } else {
+    btn.textContent = 'Mark done ✓';
+    done.delete(idx);
+    document.querySelector(`[data-n="${idx}"]`)?.classList.remove('done');
+  }
+  const pct = Math.round(done.size / total * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progCount').textContent = `${done.size}/${total}`;
+}
+
+function togCS() {
+  csOpen = !csOpen;
+  document.getElementById('csPanel').classList.toggle('open', csOpen);
+}
+
+function cp(btn) {
+  const code = btn.closest('.code-blk').querySelector('.code-body').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  });
+}
+</script>
+</body>
+</html>
