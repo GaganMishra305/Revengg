@@ -1,0 +1,2193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ghidra for CTF</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --bg:        #080a0e;
+  --bg2:       #0d1018;
+  --bg3:       #121722;
+  --bg4:       #1a2030;
+  --border:    #1d2840;
+  --border2:   #263550;
+  --gold:      #f59e0b;
+  --gold-dim:  #f59e0b16;
+  --gold-glow: #f59e0b30;
+  --violet:    #8b5cf6;
+  --violet-dim:#8b5cf615;
+  --cyan:      #22d3ee;
+  --cyan-dim:  #22d3ee14;
+  --green:     #34d399;
+  --green-dim: #34d39914;
+  --red:       #f87171;
+  --red-dim:   #f8717114;
+  --blue:      #60a5fa;
+  --blue-dim:  #60a5fa13;
+  --text:      #c8d4e8;
+  --text-mid:  #788fa8;
+  --text-low:  #3a5068;
+  --mono:      'DM Mono', monospace;
+  --sans:      'Manrope', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- TOPBAR ---- */
+.topbar {
+  height: 50px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.logo { display:flex; align-items:center; gap:10px; }
+.logo-box {
+  width: 30px; height: 30px;
+  background: var(--gold-dim);
+  border: 1px solid var(--gold);
+  border-radius: 7px;
+  display: flex; align-items:center; justify-content:center;
+  font-family: var(--sans);
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--gold);
+}
+.logo-name { font-family:var(--sans); font-weight:900; font-size:15px; color:var(--gold); letter-spacing:-0.5px; }
+.tb-sep { color: var(--border2); }
+.tb-sub { color: var(--text-mid); font-size:11.5px; }
+.tb-right { margin-left:auto; display:flex; align-items:center; gap:10px; }
+.tb-lbl { color:var(--text-low); font-size:10.5px; }
+.prog-track { width:140px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.prog-fill  { height:100%; background:var(--gold); border-radius:2px; box-shadow:0 0 6px var(--gold); transition:width .4s ease; }
+.prog-cnt   { color:var(--gold); font-size:10.5px; font-weight:600; }
+
+/* ---- LAYOUT ---- */
+.shell { display:flex; flex:1; overflow:hidden; }
+
+/* ---- SIDEBAR ---- */
+.sidebar {
+  width: 215px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 12px 0 20px;
+}
+.sidebar::-webkit-scrollbar { width:3px; }
+.sidebar::-webkit-scrollbar-thumb { background:var(--border2); }
+.sb-sec { padding:8px 16px 4px; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-low); font-weight:700; margin-top:8px; }
+.sb-btn {
+  display:flex; align-items:center; gap:9px;
+  width:100%; padding:8px 16px;
+  background:none; border:none;
+  border-left:2px solid transparent;
+  font-family:var(--mono); font-size:11px;
+  color:var(--text-mid); cursor:pointer;
+  text-align:left; transition:all .15s;
+  line-height:1.4;
+}
+.sb-btn:hover { background:var(--gold-dim); color:var(--text); }
+.sb-btn.active { background:var(--gold-dim); color:var(--gold); border-left-color:var(--gold); }
+.sb-num { color:var(--text-low); font-size:9.5px; width:16px; flex-shrink:0; }
+.sb-btn.active .sb-num { color:var(--gold); }
+.sb-ck { margin-left:auto; color:var(--green); font-size:10px; display:none; }
+.sb-btn.done .sb-ck { display:block; }
+
+/* ---- MAIN ---- */
+.main { flex:1; overflow-y:auto; }
+.main::-webkit-scrollbar { width:4px; }
+.main::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+.lesson { display:none; }
+.lesson.active { display:block; }
+
+/* ---- HERO ---- */
+.hero {
+  padding: 26px 34px 22px;
+  background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+  border-bottom: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.hero::after {
+  content: attr(data-bg);
+  position:absolute; right:28px; top:50%;
+  transform:translateY(-50%);
+  font-family:var(--sans); font-weight:900;
+  font-size:68px; color:var(--border);
+  user-select:none; line-height:1;
+}
+.hero-eye { font-size:9.5px; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); font-weight:700; margin-bottom:5px; }
+.hero-title { font-family:var(--sans); font-weight:900; font-size:22px; color:#f0f8ff; margin-bottom:8px; line-height:1.2; }
+.hero-desc { color:var(--text-mid); font-size:12.5px; max-width:580px; line-height:1.85; }
+.hero-pills { display:flex; gap:7px; flex-wrap:wrap; margin-top:12px; }
+.pill { font-size:9.5px; padding:2px 9px; border-radius:3px; border:1px solid var(--border2); color:var(--text-low); }
+
+/* ---- BODY ---- */
+.body { padding:26px 34px; }
+.sec { margin-bottom:26px; }
+.sec-title {
+  font-size:9.5px; letter-spacing:1.8px; text-transform:uppercase;
+  color:var(--text-low); font-weight:700;
+  margin-bottom:10px; padding-bottom:7px;
+  border-bottom:1px solid var(--border);
+}
+
+/* ---- CODE ---- */
+.code-blk { border:1px solid var(--border); border-radius:6px; overflow:hidden; margin:9px 0; }
+.code-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:6px 13px; background:var(--bg3);
+  border-bottom:1px solid var(--border);
+  font-size:9.5px; color:var(--text-low);
+}
+.lang { color:var(--gold); font-weight:600; letter-spacing:.5px; }
+.cp-btn { cursor:pointer; background:none; border:none; font-family:var(--mono); font-size:9.5px; color:var(--text-low); transition:color .2s; }
+.cp-btn:hover { color:var(--gold); }
+.code-body { padding:13px 17px; background:var(--bg); overflow-x:auto; font-size:12px; line-height:2; }
+.code-body::-webkit-scrollbar { height:3px; }
+.code-body::-webkit-scrollbar-thumb { background:var(--border2); }
+
+/* syntax */
+.kw   { color:var(--violet); }
+.fn   { color:var(--blue); }
+.str  { color:var(--green); }
+.num  { color:var(--gold); }
+.cmt  { color:var(--text-low); font-style:italic; }
+.cmd  { color:var(--cyan); }
+.addr { color:var(--blue); }
+.out  { color:var(--text-mid); }
+.hl   { color:var(--gold); font-weight:600; }
+.ui   { color:var(--gold); font-style:italic; }  /* UI element */
+
+/* ---- BOXES ---- */
+.box { border-radius:5px; padding:11px 15px; margin:10px 0; font-size:12.5px; line-height:1.85; }
+.box .lbl { font-size:9px; letter-spacing:1.8px; text-transform:uppercase; font-weight:700; margin-bottom:4px; }
+.box.tip  { background:var(--gold-dim);   border-left:3px solid var(--gold); }
+.box.tip  .lbl { color:var(--gold); }
+.box.note { background:var(--cyan-dim);   border-left:3px solid var(--cyan); }
+.box.note .lbl { color:var(--cyan); }
+.box.warn { background:var(--red-dim);    border-left:3px solid var(--red); }
+.box.warn .lbl { color:var(--red); }
+.box.goal { background:var(--green-dim);  border-left:3px solid var(--green); }
+.box.goal .lbl { color:var(--green); }
+.box.violet { background:var(--violet-dim); border-left:3px solid var(--violet); }
+.box.violet .lbl { color:var(--violet); }
+
+/* ---- STEPS ---- */
+.steps { display:flex; flex-direction:column; gap:0; counter-reset:step; }
+.step { display:flex; gap:0; position:relative; }
+.step::before {
+  counter-increment:step; content:counter(step);
+  min-width:26px; height:26px; border-radius:50%;
+  background:var(--bg3); border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; font-weight:700; color:var(--gold);
+  flex-shrink:0; margin-top:2px; z-index:1;
+}
+.step::after { content:''; position:absolute; left:12px; top:30px; bottom:-4px; width:1px; background:var(--border); }
+.step:last-child::after { display:none; }
+.step-body { padding:0 0 20px 15px; flex:1; }
+.step-title { font-size:12px; font-weight:600; color:var(--text); margin-bottom:6px; }
+
+/* ---- TABLE ---- */
+.tbl { width:100%; border-collapse:collapse; margin:8px 0; }
+.tbl th { padding:6px 13px; font-size:9px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-low); border-bottom:1px solid var(--border); text-align:left; font-weight:700; }
+.tbl td { padding:7px 13px; border-bottom:1px solid var(--border); font-size:11.5px; vertical-align:top; }
+.tbl tr:last-child td { border-bottom:none; }
+.tbl tr:hover td { background:var(--gold-dim); }
+.tc { color:var(--cyan); }
+.tg { color:var(--gold); }
+.td { color:var(--text-mid); }
+
+/* ---- CHALLENGE ---- */
+.chal { border:1px solid var(--border2); border-radius:7px; overflow:hidden; margin:18px 0; }
+.chal-hdr { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:var(--gold-dim); border-bottom:1px solid var(--border2); cursor:pointer; user-select:none; }
+.chal-l { display:flex; align-items:center; gap:10px; }
+.chal-icon { color:var(--gold); font-size:14px; }
+.chal-name { color:var(--gold); font-size:11.5px; font-weight:600; }
+.chal-tag  { color:var(--gold); font-size:9px; letter-spacing:1px; text-transform:uppercase; opacity:.7; }
+.chal-arr  { color:var(--text-mid); font-size:10px; }
+.chal-body { padding:16px; background:var(--bg3); display:none; }
+.chal-body.open { display:block; }
+.chal-q { color:var(--text); font-size:12.5px; line-height:1.9; margin-bottom:12px; }
+
+.hint-wrap { border:1px dashed var(--border2); border-radius:4px; overflow:hidden; margin-top:12px; }
+.hint-tog { width:100%; padding:7px 13px; background:none; border:none; font-family:var(--mono); font-size:11px; color:var(--text-mid); cursor:pointer; text-align:left; transition:color .2s; }
+.hint-tog:hover { color:var(--text); }
+.hint-body { padding:11px 15px; background:var(--bg2); border-top:1px dashed var(--border2); color:var(--text-mid); font-size:11.5px; line-height:1.85; display:none; }
+.hint-body.open { display:block; }
+.hc { color:var(--gold); }
+.hb { color:var(--cyan); }
+
+.done-btn { margin-top:12px; padding:7px 18px; background:none; border:1px solid var(--border2); border-radius:4px; color:var(--text-mid); font-family:var(--mono); font-size:11px; cursor:pointer; transition:all .2s; }
+.done-btn:hover { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
+.done-btn.marked { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); }
+
+/* ---- NAV ROW ---- */
+.nav-row { display:flex; gap:10px; padding:22px 34px 8px; border-top:1px solid var(--border); margin-top:14px; }
+.nbtn { padding:9px 20px; border-radius:5px; font-family:var(--mono); font-size:11.5px; cursor:pointer; border:1px solid var(--border2); background:var(--bg2); color:var(--text-mid); transition:all .2s; }
+.nbtn:hover { border-color:var(--gold); color:var(--gold); }
+.nbtn.p { border-color:var(--gold); color:var(--gold); background:var(--gold-dim); font-weight:600; }
+.nbtn.p:hover { background:var(--gold); color:#000; }
+.nbtn:disabled { opacity:.3; cursor:not-allowed; }
+.nbtn:disabled:hover { border-color:var(--border2); color:var(--text-mid); background:var(--bg2); }
+
+/* ---- CHEATSHEET ---- */
+.cs-tab { position:fixed; right:0; top:50%; transform:translateY(-50%); writing-mode:vertical-rl; padding:13px 5px; background:var(--bg2); border:1px solid var(--border); border-right:none; border-radius:6px 0 0 6px; font-size:9.5px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); cursor:pointer; z-index:100; font-family:var(--mono); font-weight:700; }
+.cs-panel { position:fixed; right:-310px; top:50px; bottom:0; width:310px; background:var(--bg2); border-left:1px solid var(--border); overflow-y:auto; z-index:99; transition:right .3s ease; padding:18px 0; }
+.cs-panel.open { right:0; }
+.cs-panel::-webkit-scrollbar { width:3px; }
+.cs-panel::-webkit-scrollbar-thumb { background:var(--border2); }
+.cs-grp { margin-bottom:18px; }
+.cs-title { padding:6px 16px; font-size:8.5px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); font-weight:700; border-bottom:1px solid var(--border); margin-bottom:3px; }
+.cs-row { display:flex; gap:8px; padding:4px 16px; align-items:baseline; }
+.cs-k { color:var(--gold); font-size:10.5px; white-space:nowrap; min-width:120px; }
+.cs-v { color:var(--text-mid); font-size:10.5px; line-height:1.5; }
+
+/* UI FLOW ARROWS */
+.flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0; font-size:12px; }
+.flow-step { background:var(--bg3); border:1px solid var(--border2); border-radius:4px; padding:5px 12px; color:var(--text); }
+.flow-arr { color:var(--gold); font-size:14px; }
+
+/* Inline */
+code { background:var(--bg3); border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-family:var(--mono); font-size:11.5px; color:var(--gold); }
+kbd { background:var(--bg3); border:1px solid var(--border2); border-bottom:2px solid var(--border2); border-radius:3px; padding:1px 7px; font-family:var(--mono); font-size:11px; color:var(--cyan); }
+
+/* GHIDRA WINDOW MOCK */
+.ghidra-mock {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 12px 0;
+  font-size: 11.5px;
+}
+.ghidra-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #1e2d40;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-low);
+}
+.ghidra-mock-dot { width: 8px; height: 8px; border-radius: 50%; }
+.ghidra-mock-body { display: flex; }
+.ghidra-pane {
+  padding: 10px 14px;
+  border-right: 1px solid var(--border);
+  min-width: 120px;
+}
+.ghidra-pane:last-child { border-right: none; flex: 1; }
+.ghidra-pane-title { font-size: 9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-low); margin-bottom: 6px; font-weight:600; }
+.ghidra-pane-item { color: var(--text-mid); padding: 2px 0; font-size:11px; cursor:default; }
+.ghidra-pane-item.hl { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-box">Gh</div>
+    <span class="logo-name">Ghidra</span>
+  </div>
+  <span class="tb-sep">·</span>
+  <span class="tb-sub">Complete CTF field guide — decompile · analyse · script</span>
+  <div class="tb-right">
+    <span class="tb-lbl">progress</span>
+    <div class="prog-track"><div class="prog-fill" id="pf" style="width:0%"></div></div>
+    <span class="prog-cnt" id="pc">0/13</span>
+  </div>
+</div>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-sec">Setup</div>
+  <button class="sb-btn active" data-n="0" onclick="go(0)"><span class="sb-num">01</span>Install & First Launch<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="1" onclick="go(1)"><span class="sb-num">02</span>The UI Layout<span class="sb-ck">✓</span></button>
+
+  <div class="sb-sec">Analysis</div>
+  <button class="sb-btn" data-n="2" onclick="go(2)"><span class="sb-num">03</span>Importing & Analyzing<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="3" onclick="go(3)"><span class="sb-num">04</span>Decompiler Window<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="4" onclick="go(4)"><span class="sb-num">05</span>Disassembly Listing<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="5" onclick="go(5)"><span class="sb-num">06</span>Functions & Symbols<span class="sb-ck">✓</span></button>
+
+  <div class="sb-sec">Reversing</div>
+  <button class="sb-btn" data-n="6" onclick="go(6)"><span class="sb-num">07</span>Renaming & Retyping<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="7" onclick="go(7)"><span class="sb-num">08</span>Cross-References<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="8" onclick="go(8)"><span class="sb-num">09</span>Search & Data Types<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="9" onclick="go(9)"><span class="sb-num">10</span>Patching Bytes<span class="sb-ck">✓</span></button>
+
+  <div class="sb-sec">Power</div>
+  <button class="sb-btn" data-n="10" onclick="go(10)"><span class="sb-num">11</span>Scripting (Java / Python)<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="11" onclick="go(11)"><span class="sb-num">12</span>Plugins & Extensions<span class="sb-ck">✓</span></button>
+  <button class="sb-btn" data-n="12" onclick="go(12)"><span class="sb-num">13</span>Full CTF Workflow<span class="sb-ck">✓</span></button>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="mainArea">
+
+<!-- ====================================================== -->
+<!-- L0: Install & First Launch                             -->
+<!-- ====================================================== -->
+<div class="lesson active" id="l0">
+  <div class="hero" data-bg="Gh">
+    <div class="hero-eye">Lesson 01 · Setup</div>
+    <div class="hero-title">Install & First Launch</div>
+    <div class="hero-desc">Ghidra is the NSA's open-source reverse engineering suite. It's free, powerful, and has a world-class decompiler. This is what pros use when IDA is too expensive.</div>
+    <div class="hero-pills"><span class="pill">Java 17+</span><span class="pill">ghidraRun</span><span class="pill">headless</span><span class="pill">project setup</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">📥 Installation</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Step 1: Install Java 17+ (required)</span>
+<span class="cmd">sudo apt install openjdk-17-jdk</span>
+<span class="cmd">java -version</span>             <span class="cmt"># Must be 17 or higher</span>
+
+<span class="cmt"># Step 2: Download Ghidra</span>
+<span class="cmt"># → https://github.com/NationalSecurityAgency/ghidra/releases</span>
+<span class="cmt"># → Download ghidra_X.X_PUBLIC_YYYYMMDD.zip</span>
+
+<span class="cmt"># Step 3: Extract and run</span>
+<span class="cmd">unzip ghidra_*.zip</span>
+<span class="cmd">cd ghidra_*</span>
+<span class="cmd">./ghidraRun</span>               <span class="cmt"># GUI mode</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🚀 First Launch — Project Setup</div>
+      <div class="box note">
+        <div class="lbl">Ghidra is Project-Based</div>
+        Unlike r2/GDB, Ghidra requires you to create a <strong>Project</strong> first, then import binaries into it. Projects store your analysis, notes, renamed symbols, and comments persistently — extremely valuable for CTFs with multiple related binaries.
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Create a new project</div>
+            <div class="flow">
+              <span class="flow-step">File</span><span class="flow-arr">→</span>
+              <span class="flow-step">New Project</span><span class="flow-arr">→</span>
+              <span class="flow-step">Non-Shared Project</span><span class="flow-arr">→</span>
+              <span class="flow-step">Choose directory &amp; name</span><span class="flow-arr">→</span>
+              <span class="flow-step">Finish</span>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Import a binary</div>
+            <div class="flow">
+              <span class="flow-step">File</span><span class="flow-arr">→</span>
+              <span class="flow-step">Import File</span><span class="flow-arr">→</span>
+              <span class="flow-step">Select binary</span><span class="flow-arr">→</span>
+              <span class="flow-step">OK (auto-detects format)</span>
+            </div>
+            <div class="box tip" style="margin-top:8px;">
+              <div class="lbl">Auto-detection</div>
+              Ghidra auto-detects ELF, PE, Mach-O, raw binary, firmware, and more. For raw firmware: choose "Raw Binary" and set the correct architecture manually.
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Open in CodeBrowser (the main analysis window)</div>
+            <div class="flow">
+              <span class="flow-step">Double-click binary</span><span class="flow-arr">→</span>
+              <span class="flow-step">Analyze? → Yes</span><span class="flow-arr">→</span>
+              <span class="flow-step">Analyze (accept defaults)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">💻 Headless Mode (No GUI — great for scripting)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># analyzeHeadless is inside support/ directory</span>
+<span class="cmd">./support/analyzeHeadless /tmp/myproject MyProject \</span>
+<span class="cmd">  -import ./binary \</span>
+<span class="cmd">  -postScript ExportFunctions.py \</span>
+<span class="cmd">  -scriptPath ./scripts</span>
+
+<span class="cmt"># One-liner to analyze and run a script:</span>
+<span class="cmd">./support/analyzeHeadless /tmp/proj Proj -import ./bin -postScript Decompile.java</span>
+
+<span class="cmt"># Analyze without running a script (just pre-analyze):</span>
+<span class="cmd">./support/analyzeHeadless /tmp/proj Proj -import ./bin -analysisTimeoutPerFile 60</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 01: Setup & Import</div><div class="chal-tag">warmup · 5 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          1. Install Ghidra and verify Java: <code>java -version</code><br>
+          2. Launch Ghidra and create a project called "CTF_Training"<br>
+          3. Compile a simple binary: <code>gcc -o hello hello.c</code><br>
+          4. Import it into your project<br>
+          5. Open in CodeBrowser and run analysis (accept defaults)<br>
+          6. Observe what Ghidra auto-detected: arch? OS? format?<br>
+          7. <strong>Bonus:</strong> check the import summary dialog carefully — how many functions were found? How many strings?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            After import, summary shows: Language (x86:LE:64:default), Compiler (gcc)<br>
+            After analysis: <span class="hc">Window → Functions</span> shows discovered functions<br>
+            For stripped binary: fewer named functions, more <span class="hc">FUN_XXXXXXXX</span> entries
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,0)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" disabled>← prev</button>
+      <button class="nbtn p" onclick="go(1)">Next: UI Layout →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L1: UI Layout                                          -->
+<!-- ====================================================== -->
+<div class="lesson" id="l1">
+  <div class="hero" data-bg="UI">
+    <div class="hero-eye">Lesson 02 · Setup</div>
+    <div class="hero-title">The UI Layout</div>
+    <div class="hero-desc">Ghidra's CodeBrowser has a lot of panels. Know which window does what and you'll stop fighting the UI and start doing analysis. Here's your orientation.</div>
+    <div class="hero-pills"><span class="pill">CodeBrowser</span><span class="pill">Listing</span><span class="pill">Decompiler</span><span class="pill">Symbol Tree</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🪟 The Six Essential Windows</div>
+
+      <div class="ghidra-mock">
+        <div class="ghidra-mock-bar">
+          <div class="ghidra-mock-dot" style="background:#ef4444"></div>
+          <div class="ghidra-mock-dot" style="background:#f59e0b"></div>
+          <div class="ghidra-mock-dot" style="background:#22c55e"></div>
+          <span style="margin-left:6px">Ghidra: CodeBrowser — binary</span>
+        </div>
+        <div class="ghidra-mock-body">
+          <div class="ghidra-pane">
+            <div class="ghidra-pane-title">Symbol Tree</div>
+            <div class="ghidra-pane-item">▶ Functions</div>
+            <div class="ghidra-pane-item hl">  main</div>
+            <div class="ghidra-pane-item hl">  win</div>
+            <div class="ghidra-pane-item">  FUN_00401000</div>
+            <div class="ghidra-pane-item">▶ Imports</div>
+            <div class="ghidra-pane-item">▶ Exports</div>
+            <div class="ghidra-pane-item">▶ Labels</div>
+          </div>
+          <div class="ghidra-pane">
+            <div class="ghidra-pane-title">Listing (Disassembly)</div>
+            <div class="ghidra-pane-item"><span style="color:var(--blue)">00401156</span> PUSH  RBP</div>
+            <div class="ghidra-pane-item"><span style="color:var(--blue)">00401157</span> MOV   RBP,RSP</div>
+            <div class="ghidra-pane-item hl"><span style="color:var(--blue)">0040115a</span> CMP   dword [key],0x1337</div>
+            <div class="ghidra-pane-item"><span style="color:var(--blue)">00401161</span> JNZ   LAB_00401170</div>
+            <div class="ghidra-pane-item"><span style="color:var(--blue)">00401167</span> CALL  win</div>
+          </div>
+          <div class="ghidra-pane" style="border-right:none">
+            <div class="ghidra-pane-title">Decompiler</div>
+            <div class="ghidra-pane-item"><span style="color:var(--violet)">void</span> main()</div>
+            <div class="ghidra-pane-item">{</div>
+            <div class="ghidra-pane-item hl">  <span style="color:var(--violet)">if</span> (key == <span style="color:var(--gold)">0x1337</span>)</div>
+            <div class="ghidra-pane-item">    win();</div>
+            <div class="ghidra-pane-item">  <span style="color:var(--violet)">return</span>;</div>
+            <div class="ghidra-pane-item">}</div>
+          </div>
+        </div>
+      </div>
+
+      <table class="tbl" style="margin-top:14px;">
+        <tr><th>Window</th><th>What it shows</th><th>Open via</th></tr>
+        <tr><td class="tg">Listing</td><td class="td">Disassembly — raw assembly with labels, comments, xrefs</td><td class="tc">always visible</td></tr>
+        <tr><td class="tg">Decompiler</td><td class="td">C pseudocode — Ghidra's killer feature. Synced with Listing.</td><td class="tc">Window → Decompiler</td></tr>
+        <tr><td class="tg">Symbol Tree</td><td class="td">All functions, imports, exports, labels — clickable tree</td><td class="tc">Window → Symbol Tree</td></tr>
+        <tr><td class="tg">Data Type Manager</td><td class="td">All known structs, enums, typedefs. Drag onto decompiler output.</td><td class="tc">Window → Data Type Mgr</td></tr>
+        <tr><td class="tg">Function Graph</td><td class="td">Visual CFG of current function — like VV in r2</td><td class="tc">Window → Function Graph</td></tr>
+        <tr><td class="tg">References / XRefs</td><td class="td">Who calls this? What does it call?</td><td class="tc">right-click → References</td></tr>
+        <tr><td class="tg">Bytes</td><td class="td">Raw hex view of memory</td><td class="tc">Window → Bytes</td></tr>
+        <tr><td class="tg">Defined Strings</td><td class="td">All discovered strings — sorted, searchable</td><td class="tc">Window → Defined Strings</td></tr>
+        <tr><td class="tg">Program Trees</td><td class="td">Memory map / sections (.text, .data etc.)</td><td class="tc">Window → Program Trees</td></tr>
+        <tr><td class="tg">Console</td><td class="td">Script output and interpreter</td><td class="tc">Window → Console</td></tr>
+      </table>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">⌨ Essential Keyboard Shortcuts</div>
+      <table class="tbl">
+        <tr><th>Key</th><th>Action</th></tr>
+        <tr><td class="tc"><kbd>G</kbd></td><td class="td">Go to address (like <code>s 0xaddr</code> in r2)</td></tr>
+        <tr><td class="tc"><kbd>L</kbd></td><td class="td">Rename symbol/label at cursor</td></tr>
+        <tr><td class="tc"><kbd>T</kbd></td><td class="td">Retype variable at cursor</td></tr>
+        <tr><td class="tc"><kbd>N</kbd></td><td class="td">Rename function/label (in Symbol Tree)</td></tr>
+        <tr><td class="tc"><kbd>;</kbd></td><td class="td">Add comment at cursor (EOL comment)</td></tr>
+        <tr><td class="tc"><kbd>Ctrl+Shift+;</kbd></td><td class="td">Add plate comment (function header)</td></tr>
+        <tr><td class="tc"><kbd>Ctrl+F</kbd></td><td class="td">Search (within current view)</td></tr>
+        <tr><td class="tc"><kbd>Ctrl+Shift+F</kbd></td><td class="td">Search everything (memory, functions, strings)</td></tr>
+        <tr><td class="tc"><kbd>Ctrl+Alt+F</kbd></td><td class="td">Find references to symbol at cursor</td></tr>
+        <tr><td class="tc"><kbd>Ctrl+Z</kbd></td><td class="td">Undo (all edits tracked)</td></tr>
+        <tr><td class="tc"><kbd>F</kbd></td><td class="td">Create function at cursor (when code isn't analyzed)</td></tr>
+        <tr><td class="tc"><kbd>D</kbd></td><td class="td">Disassemble at cursor (force interpret as code)</td></tr>
+        <tr><td class="tc"><kbd>Alt+←</kbd></td><td class="td">Navigate back (browser-style)</td></tr>
+        <tr><td class="tc"><kbd>Alt+→</kbd></td><td class="td">Navigate forward</td></tr>
+        <tr><td class="tc"><kbd>double-click</kbd></td><td class="td">Navigate to symbol/address under cursor</td></tr>
+      </table>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 02: Configure Your Workspace</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Open any binary in Ghidra's CodeBrowser and:<br><br>
+          1. Open <kbd>Window → Decompiler</kbd> — dock it to the right of Listing<br>
+          2. Open <kbd>Window → Defined Strings</kbd> — scan through it<br>
+          3. Open <kbd>Window → Symbol Tree</kbd> — expand Functions<br>
+          4. Click any function in Symbol Tree — both Listing and Decompiler should sync<br>
+          5. Press <kbd>G</kbd> and type a known address (like the entry point from analysis log)<br>
+          6. Press <kbd>Alt+←</kbd> to navigate back<br>
+          7. <strong>Bonus:</strong> open <kbd>Window → Function Graph</kbd> — explore the CFG of main
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            Drag panels by their title bar to dock them<br>
+            Listing + Decompiler side-by-side is the standard layout<br>
+            <span class="hc">Window → Reset Windows to Default</span> if you mess up the layout<br>
+            Function Graph is read-only but shows basic blocks beautifully
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,1)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(0)">← prev</button>
+      <button class="nbtn p" onclick="go(2)">Next: Importing & Analyzing →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L2: Importing & Analyzing                              -->
+<!-- ====================================================== -->
+<div class="lesson" id="l2">
+  <div class="hero" data-bg="AA">
+    <div class="hero-eye">Lesson 03 · Analysis</div>
+    <div class="hero-title">Importing & Analysis Options</div>
+    <div class="hero-desc">Ghidra's analysis is configurable. The defaults are good, but knowing which analyzers do what helps you tune for speed vs. depth. For CTFs, you usually want deep analysis.</div>
+    <div class="hero-pills"><span class="pill">analysis options</span><span class="pill">auto-analysis</span><span class="pill">re-analyze</span><span class="pill">memory map</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">⚙ Running / Re-running Analysis</div>
+      <div class="flow">
+        <span class="flow-step">Analysis</span><span class="flow-arr">→</span>
+        <span class="flow-step">Auto Analyze</span><span class="flow-arr">→</span>
+        <span class="flow-step">Check analyzers</span><span class="flow-arr">→</span>
+        <span class="flow-step">Analyze</span>
+      </div>
+      <div class="box tip">
+        <div class="lbl">Re-run anytime</div>
+        You can re-run analysis at any time — Ghidra merges new results with existing ones. If you manually created a function, re-running analysis will try to find functions it calls.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔬 Key Analyzers to Know</div>
+      <table class="tbl">
+        <tr><th>Analyzer</th><th>What it does</th><th>Enable?</th></tr>
+        <tr><td class="tg">Disassemble</td><td class="td">Basic disassembly pass</td><td class="tc">Always</td></tr>
+        <tr><td class="tg">Function ID</td><td class="td">Matches known library functions by signature hash</td><td class="tc">Always</td></tr>
+        <tr><td class="tg">Demangler</td><td class="td">Decodes C++ mangled names</td><td class="tc">C++ binaries</td></tr>
+        <tr><td class="tg">Stack Analysis</td><td class="td">Figures out local variable layout</td><td class="tc">Always</td></tr>
+        <tr><td class="tg">Data Reference</td><td class="td">Finds references to global data</td><td class="tc">Always</td></tr>
+        <tr><td class="tg">Aggressive Instruction Finder</td><td class="td">Tries harder to find code in data sections</td><td class="tc">Stripped binaries</td></tr>
+        <tr><td class="tg">Condense Filler Bytes</td><td class="td">Hides padding NOPs</td><td class="tc">Optional</td></tr>
+        <tr><td class="tg">Non-returning Functions</td><td class="td">Detects functions that never return (exit, panic)</td><td class="tc">Always</td></tr>
+      </table>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🗺 Memory Map</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">where to find it</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">Window → Memory Map</span>    <span class="cmt">shows all segments with addresses + permissions</span>
+
+<span class="cmt"># Useful for:</span>
+<span class="cmt"># - Finding .text (code), .data (globals), .bss (uninit)</span>
+<span class="cmt"># - Checking if a segment is writable (W), readable (R), executable (X)</span>
+<span class="cmt"># - Adding new memory blocks (for shellcode analysis)</span>
+<span class="cmt"># - Understanding firmware memory layout</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📋 Binary Properties & Security Flags</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra menus</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">Window → Program Trees</span>   <span class="cmt">memory sections overview</span>
+<span class="ui">File → Properties</span>         <span class="cmt">binary metadata (arch, format, MD5, etc.)</span>
+
+<span class="cmt"># For security flags (NX, ASLR, canary, PIE, RELRO):</span>
+<span class="cmt"># Ghidra doesn't show checksec-style info natively.</span>
+<span class="cmt"># Use from shell BEFORE importing:</span>
+<span class="cmd">checksec --file=./binary</span>   <span class="cmt"># pwntools checksec</span>
+<span class="cmd">rabin2 -I ./binary</span>         <span class="cmt"># r2 suite</span>
+        </div>
+      </div>
+      <div class="box warn">
+        <div class="lbl">Always Run checksec First</div>
+        Ghidra is pure static analysis — it doesn't know about ASLR or runtime memory. Run <code>checksec</code> or <code>rabin2 -I</code> before importing so you know what protections you're dealing with. This context shapes how you interpret the decompiler output.
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 03: Analyse a Stripped Binary</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile stripped: <code>gcc -s -O1 -o stripped binary.c</code><br><br>
+          1. Run <code>checksec --file=./stripped</code> from shell first — note findings<br>
+          2. Import into Ghidra, run analysis with default settings<br>
+          3. <kbd>Window → Memory Map</kbd> — list the sections. Which is executable?<br>
+          4. <kbd>Window → Symbol Tree → Functions</kbd> — how many are named vs <code>FUN_</code>?<br>
+          5. Enable <em>"Aggressive Instruction Finder"</em> in Analysis options and re-run<br>
+          6. Did it find more functions?<br>
+          7. <strong>Bonus:</strong> use headless mode to analyze: <code>./support/analyzeHeadless /tmp/p P -import ./stripped</code>
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            Stripped = no debug symbols. Most functions become <span class="hc">FUN_XXXXXXXX</span><br>
+            Memory Map: .text = r-x, .data = rw-, .bss = rw-<br>
+            Aggressive Instruction Finder: <span class="hc">Analysis → Auto Analyze → check it → Analyze</span><br>
+            Headless: creates a .gpr project in /tmp/p/
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,2)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(1)">← prev</button>
+      <button class="nbtn p" onclick="go(3)">Next: Decompiler Window →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L3: Decompiler                                         -->
+<!-- ====================================================== -->
+<div class="lesson" id="l3">
+  <div class="hero" data-bg="C">
+    <div class="hero-eye">Lesson 04 · Analysis</div>
+    <div class="hero-title">The Decompiler Window</div>
+    <div class="hero-desc">Ghidra's decompiler is its crown jewel. It converts assembly back into readable C pseudocode — not perfect, but close enough to understand logic in minutes rather than hours.</div>
+    <div class="hero-pills"><span class="pill">C pseudocode</span><span class="pill">variable types</span><span class="pill">right-click actions</span><span class="pill">sync with Listing</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">📖 Reading Decompiler Output</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">example decompiler output — annotated</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">/* Initial output — before renaming/retyping */</span>
+
+<span class="kw">undefined8</span> <span class="fn">FUN_00401156</span>(<span class="kw">void</span>)
+{
+  <span class="kw">int</span> iVar1;
+  <span class="kw">char</span> local_48 [<span class="num">64</span>];    <span class="cmt">// stack buffer — auto-sized</span>
+  <span class="kw">long</span> local_10;          <span class="cmt">// suspicious: probably the canary</span>
+
+  local_10 = *(long *)(in_FS_OFFSET + <span class="num">0x28</span>);  <span class="cmt">// canary read from TLS</span>
+  <span class="fn">puts</span>(<span class="str">"Enter password: "</span>);
+  <span class="fn">fgets</span>(local_48, <span class="num">0x40</span>, stdin);
+  iVar1 = <span class="fn">strcmp</span>(local_48, <span class="str">"s3cr3t_k3y\n"</span>);   <span class="cmt">// ← the check!</span>
+  <span class="kw">if</span> (iVar1 == <span class="num">0</span>) {
+    <span class="fn">FUN_00401100</span>();       <span class="cmt">// ← probably win()</span>
+  }
+  <span class="kw">if</span> (local_10 != *(long *)(in_FS_OFFSET + <span class="num">0x28</span>)) {
+    <span class="fn">__stack_chk_fail</span>();   <span class="cmt">// canary check</span>
+  }
+  <span class="kw">return</span> <span class="num">0</span>;
+}
+        </div>
+      </div>
+      <div class="box tip">
+        <div class="lbl">💡 What to Look For Immediately</div>
+        1. <strong>strcmp / memcmp</strong> — password comparison. Check the second argument for the expected string.<br>
+        2. <strong>FUN_XXXXXXXX calls</strong> — unknown functions. Double-click to navigate, check if it's a "win" function.<br>
+        3. <strong>Buffer sizes</strong> — <code>char local_48[64]</code> with <code>fgets(local_48, 0x40, ...)</code> is safe. With <code>gets</code>: overflow possible.<br>
+        4. <strong>in_FS_OFFSET+0x28</strong> — that's the stack canary. Don't be confused by it.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🖱 Right-Click Actions in Decompiler</div>
+      <table class="tbl">
+        <tr><th>Right-click on</th><th>Useful actions</th></tr>
+        <tr><td class="tg">Variable name</td><td class="td">Rename, Retype, Split out, Go to declaration</td></tr>
+        <tr><td class="tg">Function name</td><td class="td">Rename function, Go to function, Find references</td></tr>
+        <tr><td class="tg">String literal</td><td class="td">Go to address in Listing, Find references</td></tr>
+        <tr><td class="tg">Cast expression</td><td class="td">Retype, Add cast, Remove cast</td></tr>
+        <tr><td class="tg">Number constant</td><td class="td">Convert to hex/decimal/char/enum</td></tr>
+        <tr><td class="tg">Field access</td><td class="td">Auto-create struct, Edit structure</td></tr>
+        <tr><td class="tg">Anywhere</td><td class="td">Decompile current function, Export to C file</td></tr>
+      </table>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">⚡ Common Decompiler Artifacts</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">things that look weird but aren't</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">// "in_FS_OFFSET + 0x28" → stack canary read (ignore it)</span>
+<span class="kw">long</span> local_10 = *(long *)(in_FS_OFFSET + <span class="num">0x28</span>);
+
+<span class="cmt">// "undefined8" → Ghidra can't determine the return type yet</span>
+<span class="cmt">// Fix: retype the function (T key) or right-click → Edit Function Signature</span>
+<span class="kw">undefined8</span> some_function(<span class="kw">void</span>);
+
+<span class="cmt">// "CONCAT44(x,y)" → two 4-byte values joined into one 8-byte value</span>
+<span class="cmt">// Happens when Ghidra can't resolve 64-bit register usage</span>
+
+<span class="cmt">// "param_1" → unnamed parameter → rename it to something meaningful</span>
+<span class="kw">void</span> <span class="fn">FUN_00401000</span>(<span class="kw">long</span> param_1, <span class="kw">int</span> param_2)
+
+<span class="cmt">// "(int *)(unaff_RBP + -0x8)" → local var via base pointer</span>
+<span class="cmt">// Ghidra sometimes fails to resolve these — check Listing for clarity</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 04: Read the Check</div><div class="chal-tag">15 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>int check(char*s){return strcmp(s,"gh1dra_rules")==0;} int main(){char b[64];scanf("%63s",b);if(check(b))puts("win!");else puts("nope");}</code><br><br>
+          1. Import and analyze in Ghidra<br>
+          2. Navigate to <code>main</code> via Symbol Tree<br>
+          3. In the Decompiler, find the call to <code>check</code><br>
+          4. Double-click <code>check</code> — the Decompiler navigates there<br>
+          5. Read the decompiler output — what string is being compared?<br>
+          6. Right-click the string literal in Decompiler → <em>Go to Address in Listing</em><br>
+          7. In Listing, verify the raw bytes match<br>
+          8. <strong>Bonus:</strong> Right-click the unknown number (return of strcmp) → Convert to hex — does it help?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            Symbol Tree → Functions → main (or FUN_xxx if stripped)<br>
+            Decompiler shows: <span class="hc">iVar1 = strcmp(local_buf, "gh1dra_rules")</span><br>
+            Double-click check → decompiler shows the function body<br>
+            In Listing: string at .rodata address, bytes: 67 68 31 64 72 61 ...
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,3)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(2)">← prev</button>
+      <button class="nbtn p" onclick="go(4)">Next: Disassembly Listing →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L4: Disassembly Listing                               -->
+<!-- ====================================================== -->
+<div class="lesson" id="l4">
+  <div class="hero" data-bg="asm">
+    <div class="hero-eye">Lesson 05 · Analysis</div>
+    <div class="hero-title">The Disassembly Listing</div>
+    <div class="hero-desc">The Listing is Ghidra's disassembler view. It shows assembly with labels, xrefs, and data annotations. The Decompiler is higher-level, but the Listing is truth — use both together.</div>
+    <div class="hero-pills"><span class="pill">Listing</span><span class="pill">comments</span><span class="pill">labels</span><span class="pill">Function Graph</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">📋 Reading the Listing</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra Listing — annotated</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">                             ; *** FUNCTION ***</span>
+<span class="addr">                undefined8 FUN_00401156(void)</span>
+<span class="cmt">                                                  XREF[1]: main:00401200(c)</span>
+<span class="out">FUN_00401156    PUSH    RBP</span>
+<span class="out">00401157        MOV     RBP,RSP</span>
+<span class="out">0040115a        SUB     RSP,0x50</span>
+<span class="addr">0040115e        MOV     RAX,qword ptr FS:[0x28]     ; canary</span>
+<span class="out">00401167        MOV     qword ptr [RBP + local_10],RAX</span>
+<span class="addr">0040116b        LEA     RDI,[s_Enter_pass_00402010]  ; = "Enter password: "</span>
+<span class="out">00401172        CALL    &lt;EXTERNAL&gt;::puts</span>
+<span class="addr">00401177        LEA     RDI,[RBP + local_48]         ; buf</span>
+<span class="out">0040117b        MOV     ESI,0x40</span>
+<span class="out">00401180        MOV     RDX,qword ptr [stdin]</span>
+<span class="out">00401187        CALL    &lt;EXTERNAL&gt;::fgets</span>
+<span class="addr">0040118c        LEA     RSI,[s_s3cr3t_k3y_00402020]  ; = "s3cr3t_k3y\n"</span>
+<span class="addr">00401193        LEA     RDI,[RBP + local_48]         ; user input</span>
+<span class="out">00401197        CALL    &lt;EXTERNAL&gt;::strcmp</span>
+        </div>
+      </div>
+      <div class="box note">
+        <div class="lbl">Listing vs Decompiler</div>
+        The Listing is <strong>precise</strong> — exactly what the CPU executes. The Decompiler is <strong>approximate</strong> — a reconstruction. When the decompiler looks wrong, switch to Listing to see what's really happening. They're always synchronized — click in one, the other jumps to the same location.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">💬 Adding Comments</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra keyboard shortcuts for comments</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">; (semicolon)</span>         <span class="cmt">→ End-of-line comment (right side of instruction)</span>
+<span class="ui">Ctrl+;</span>               <span class="cmt">→ Pre-comment (above instruction)</span>
+<span class="ui">Ctrl+Shift+;</span>         <span class="cmt">→ Plate comment (big block above function)</span>
+<span class="ui">Ctrl+Alt+;</span>           <span class="cmt">→ Post-comment (below instruction)</span>
+
+<span class="cmt"># Right-click → Set Comment also works</span>
+<span class="cmt"># Comments are saved in the project — shared if using shared project</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🕸 Function Graph View</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">Window → Function Graph</span>    <span class="cmt">opens CFG for current function</span>
+
+<span class="cmt"># Inside Function Graph:</span>
+<span class="cmt"># Blocks = basic blocks (straight-line code)</span>
+<span class="cmt"># Edges = jumps/branches</span>
+<span class="cmt"># Green edge = conditional jump taken</span>
+<span class="cmt"># Red edge = conditional jump NOT taken</span>
+<span class="cmt"># Blue edge = unconditional jump</span>
+<span class="cmt"># Click block = Listing syncs to that address</span>
+<span class="cmt"># Hover edge = shows condition (ZF==1 etc.)</span>
+<span class="cmt"># Ctrl+Scroll = zoom, drag = pan</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 05: Listing + Graph Together</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Use the binary from challenge 04.<br><br>
+          1. Navigate to main in the Listing<br>
+          2. Find the <code>CMP</code> instruction that checks the password result<br>
+          3. Add an end-of-line comment with <kbd>;</kbd>: "password check here"<br>
+          4. Open <kbd>Window → Function Graph</kbd><br>
+          5. Find the branch from the CMP — which block leads to "win" and which to "nope"?<br>
+          6. Click the "win" block — does Listing sync there?<br>
+          7. <strong>Bonus:</strong> click the edge between blocks — what condition is shown?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            In Listing: <span class="hc">TEST EAX,EAX</span> then <span class="hc">JZ</span> or <span class="hc">JNZ</span> for the branch<br>
+            Function Graph: green edge = jump taken (success path), red = fall-through<br>
+            Comment: click address in Listing → press <span class="hc">;</span> → type comment → Enter
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,4)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(3)">← prev</button>
+      <button class="nbtn p" onclick="go(5)">Next: Functions & Symbols →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L5: Functions & Symbols                               -->
+<!-- ====================================================== -->
+<div class="lesson" id="l5">
+  <div class="hero" data-bg="fn">
+    <div class="hero-eye">Lesson 06 · Analysis</div>
+    <div class="hero-title">Functions, Symbols & Strings</div>
+    <div class="hero-desc">Finding your bearings in an unfamiliar binary. The Symbol Tree, Defined Strings window, and Imports are your three first stops for every CTF binary.</div>
+    <div class="hero-pills"><span class="pill">Symbol Tree</span><span class="pill">Defined Strings</span><span class="pill">Imports</span><span class="pill">Labels</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🌳 Symbol Tree</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Window → Symbol Tree</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Symbol Tree has these nodes:</span>
+
+<span class="out">▶ Imports</span>       <span class="cmt">← libc functions called: puts, gets, scanf, system...</span>
+<span class="out">▶ Exports</span>       <span class="cmt">← public symbols (useful for libraries)</span>
+<span class="out">▶ Functions</span>     <span class="cmt">← all analyzed functions, double-click to navigate</span>
+<span class="out">▶ Labels</span>        <span class="cmt">← named data locations, string labels</span>
+<span class="out">▶ Classes</span>       <span class="cmt">← C++ classes (if demangled)</span>
+<span class="out">▶ Namespaces</span>    <span class="cmt">← C++ namespaces</span>
+
+<span class="cmt"># Filter box at top: type "win" to filter Functions for "win"</span>
+<span class="cmt"># Right-click function → Go to → Decompiler / Listing</span>
+<span class="cmt"># Right-click function → References → Show all references</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📝 Defined Strings</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Window → Defined Strings</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Shows all string data found in the binary</span>
+<span class="cmt"># Columns: Address | Length | Type | String value</span>
+<span class="cmt"># Click any string → Listing navigates there</span>
+
+<span class="cmt"># Filter field: type to narrow strings</span>
+<span class="cmt"># Search for "flag", "CTF{", "password", "key", "secret", "admin"</span>
+
+<span class="cmt"># Right-click a string → References → Show References to Address</span>
+<span class="cmt"># This shows you WHICH function uses that string — pure gold</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📦 Imports</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Symbol Tree → Imports</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Reading imports tells you what the binary CAN do:</span>
+
+<span class="out">gets / fgets / read / scanf</span>    <span class="cmt">→ input reading (look for overflow)</span>
+<span class="out">printf / fprintf / sprintf</span>     <span class="cmt">→ output (look for format string bugs)</span>
+<span class="out">system / execve / popen</span>        <span class="cmt">→ command execution (look for ret2system)</span>
+<span class="out">strcmp / memcmp / strncmp</span>      <span class="cmt">→ comparisons (intercept args)</span>
+<span class="out">malloc / free / realloc</span>        <span class="cmt">→ heap management (look for heap bugs)</span>
+<span class="out">mmap / mprotect</span>                <span class="cmt">→ memory perms (shellcode setup)</span>
+<span class="out">dlopen / dlsym</span>                 <span class="cmt">→ dynamic loading</span>
+<span class="out">ptrace</span>                         <span class="cmt">→ anti-debug check</span>
+<span class="out">rand / srand</span>                   <span class="cmt">→ randomness (predictable with seed)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 06: Triage a New Binary</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Take any new binary (ideally something from a past CTF, like a basic crackme):<br><br>
+          1. Open Defined Strings → search "flag" or "win" or "correct" — any hints?<br>
+          2. Open Symbol Tree → Imports — what libc functions are imported? What does that imply?<br>
+          3. Look for a function called <code>win</code> or <code>success</code> in Functions<br>
+          4. Find a string reference: right-click any interesting string → References → who uses it?<br>
+          5. Navigate to that function and read the Decompiler output<br>
+          6. <strong>Bonus:</strong> in Defined Strings, right-click a string → <em>Copy Special → Address</em> — get the raw address for use in an exploit
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">Window → Defined Strings</span> → filter box → type "win"<br>
+            Right-click string → <span class="hc">References → Show References to Address</span> → double-click reference<br>
+            Decompiler shows the calling function in full C pseudocode
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,5)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(4)">← prev</button>
+      <button class="nbtn p" onclick="go(6)">Next: Renaming & Retyping →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L6: Renaming & Retyping                               -->
+<!-- ====================================================== -->
+<div class="lesson" id="l6">
+  <div class="hero" data-bg="L">
+    <div class="hero-eye">Lesson 07 · Reversing</div>
+    <div class="hero-title">Renaming & Retyping</div>
+    <div class="hero-desc">The most important reversing workflow. As you understand code, you rename variables and functions to reflect reality. Ghidra immediately updates the decompiler output — a feedback loop that dramatically accelerates understanding.</div>
+    <div class="hero-pills"><span class="pill">L rename</span><span class="pill">T retype</span><span class="pill">function signature</span><span class="pill">struct creation</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">✏ Renaming — The Most Used Action</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">how to rename in Ghidra</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># In Decompiler or Listing:</span>
+<span class="cmt"># Click on any variable / function name → press L</span>
+<span class="cmt"># Type new name → Enter</span>
+
+<span class="cmt"># Variable rename example:</span>
+<span class="cmt"># BEFORE:</span>
+<span class="kw">int</span> iVar1 = strcmp(local_48, param_1);
+
+<span class="cmt"># After pressing L on "iVar1" and typing "cmp_result":</span>
+<span class="kw">int</span> cmp_result = strcmp(local_48, param_1);
+
+<span class="cmt"># Function rename — click function name → L:</span>
+<span class="cmt"># FUN_00401100 → win_function</span>
+<span class="cmt"># Updates everywhere it's called!</span>
+
+<span class="cmt"># In Symbol Tree: right-click → Rename</span>
+<span class="cmt"># Shortcut: N key also works on functions in Symbol Tree</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔧 Retyping Variables</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">fixing wrong types improves decompiler output</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Click variable → press T → type the correct type → Enter</span>
+<span class="cmt"># Ghidra immediately re-decompiles with the new type</span>
+
+<span class="cmt"># Examples:</span>
+<span class="cmt"># undefined8 → void* or char*</span>
+<span class="cmt"># int → bool or char or uint8_t</span>
+<span class="cmt"># long → size_t or uintptr_t</span>
+
+<span class="cmt"># BEFORE:</span>
+<span class="kw">undefined8</span> param_1  <span class="cmt">// Ghidra doesn't know the type</span>
+
+<span class="cmt"># AFTER pressing T → typing "char *":</span>
+<span class="kw">char</span> *user_input    <span class="cmt">// Now shows pointer arithmetic correctly</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🖊 Editing Function Signatures</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra — fix arg count / types</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Right-click function name in Decompiler → Edit Function Signature</span>
+<span class="cmt"># OR: click function name in Decompiler → press F (Function)</span>
+
+<span class="cmt"># Dialog lets you:</span>
+<span class="cmt"># - Set return type</span>
+<span class="cmt"># - Add / remove / rename / retype parameters</span>
+<span class="cmt"># - Set calling convention (stdcall, cdecl, fastcall...)</span>
+<span class="cmt"># - Mark as varargs (for printf-style functions)</span>
+
+<span class="cmt"># Example fix for a callback:</span>
+<span class="cmt"># BEFORE: undefined8 FUN_00401100(void)</span>
+<span class="cmt"># AFTER:  int decrypt(char *buf, int len, char *key)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🏗 Creating Structs in Decompiler</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra auto-struct feature</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># When you see pointer arithmetic like:</span>
+*(param_1 + <span class="num">4</span>) = some_value;
+*(param_1 + <span class="num">8</span>) = other_value;
+
+<span class="cmt"># Right-click param_1 → Auto Create Structure</span>
+<span class="cmt"># Ghidra creates a struct with fields at those offsets!</span>
+
+<span class="cmt"># Result becomes:</span>
+param_1->field_0x4 = some_value;
+param_1->field_0x8 = other_value;
+
+<span class="cmt"># Then open Data Type Manager → find your new struct → rename fields</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 07: Fully Label a Function</div><div class="chal-tag">15 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile stripped: <code>gcc -s -O0 -o label_me label.c</code> with:<br>
+          <code>int check_key(char*k,int len){int s=0;for(int i=0;i&lt;len;i++)s+=k[i];return s==0x300;} int main(){char b[64];fgets(b,64,stdin);if(check_key(b,63))puts("correct");else puts("wrong");}</code><br><br>
+          1. Import and analyze in Ghidra<br>
+          2. Find the check function (hint: look at what main calls, or who calls puts)<br>
+          3. In the Decompiler, rename every variable to something meaningful:<br>
+          &nbsp;&nbsp;&nbsp;• the input parameter → <code>key</code><br>
+          &nbsp;&nbsp;&nbsp;• the length parameter → <code>key_len</code><br>
+          &nbsp;&nbsp;&nbsp;• the accumulator variable → <code>sum</code><br>
+          &nbsp;&nbsp;&nbsp;• the loop counter → <code>i</code><br>
+          4. Rename the function itself to <code>check_key_sum</code><br>
+          5. Does the decompiler output now read like the original C?<br>
+          6. <strong>Bonus:</strong> What value does sum need to equal? (0x300 = 768 in decimal)
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            Find check: <span class="hc">Defined Strings → "wrong"</span> → references → navigates to main → see call to FUN_XXX<br>
+            Click param_1 → <span class="hc">L</span> → type "key"<br>
+            Click param_2 → <span class="hc">L</span> → type "key_len"<br>
+            Click loop var → <span class="hc">L</span> → type "i"<br>
+            Click sum var → <span class="hc">L</span> → type "sum"<br>
+            Click function name → <span class="hc">L</span> → type "check_key_sum"
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,6)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(5)">← prev</button>
+      <button class="nbtn p" onclick="go(7)">Next: Cross-References →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L7: Cross-References                                   -->
+<!-- ====================================================== -->
+<div class="lesson" id="l7">
+  <div class="hero" data-bg="X">
+    <div class="hero-eye">Lesson 08 · Reversing</div>
+    <div class="hero-title">Cross-References (XRefs)</div>
+    <div class="hero-desc">XRefs answer two questions: "who calls this?" and "what does this call?". In CTF reversing, a single XRef from a string to its referencing function can cut your analysis time in half.</div>
+    <div class="hero-pills"><span class="pill">Show References</span><span class="pill">Ctrl+Shift+F</span><span class="pill">XRef markers</span><span class="pill">Call Tree</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🔗 Finding XRefs</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra — multiple ways to find references</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Method 1: Click symbol → Ctrl+Alt+F (fastest)</span>
+<span class="ui">Ctrl+Alt+F</span>              <span class="cmt">→ Show all references to thing at cursor</span>
+
+<span class="cmt"># Method 2: Right-click in Listing or Decompiler</span>
+<span class="ui">Right-click → References → Show References to Address</span>
+
+<span class="cmt"># Method 3: XRef markers in Listing</span>
+<span class="cmt"># Listing shows XREF[N] above function starts:</span>
+<span class="out">                             XREF[2]: main:00401200(c), main:00401250(c)</span>
+<span class="cmt"># Click the XREF line → shows all callers</span>
+
+<span class="cmt"># Method 4: Right-click function in Symbol Tree</span>
+<span class="ui">Right-click → References → Show References to FUN_XXX</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🌲 Call Tree</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Window → Call Trees</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">Window → Call Trees</span>
+
+<span class="cmt"># Two views:</span>
+<span class="cmt"># "Calls From" — what does this function call (recursive)?</span>
+<span class="cmt"># "Calls To" — who calls this function?</span>
+
+<span class="cmt"># Navigate to main → open Call Trees → see full call graph</span>
+<span class="cmt"># Expand nodes to trace call chains</span>
+<span class="cmt"># Useful for understanding data flow through large binaries</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">⚡ The String → Function XRef Trick</div>
+      <div class="box goal">
+        <div class="lbl">Key CTF Technique</div>
+        See an interesting string in Defined Strings (like "Correct!", "Nope", "/bin/sh", "flag{")? Right-click it → References → navigate directly to the function that uses it. Skip reading the whole binary — jump straight to the interesting logic.
+      </div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">step-by-step</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">1. Window → Defined Strings</span>
+<span class="ui">2. Find "Correct!" or "/bin/sh" or "flag{"</span>
+<span class="ui">3. Right-click → References → Show References to Address</span>
+<span class="ui">4. Double-click the reference → jumps to the exact call site</span>
+<span class="ui">5. Read the surrounding code in Decompiler → understand the check</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 08: Trace the Call Chain</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>void flag(){puts("CTF{xref_mastery}");}  void check(int x){if(x==42)flag();}  int main(){int n;scanf("%d",&amp;n);check(n);}</code><br><br>
+          1. Import and analyze stripped<br>
+          2. Open <kbd>Window → Defined Strings</kbd> — find "CTF{xref_mastery}"<br>
+          3. Right-click → References → who uses it?<br>
+          4. Navigate there — that's <code>flag()</code> — rename it<br>
+          5. Press <kbd>Ctrl+Alt+F</kbd> on flag — who calls flag()?<br>
+          6. Navigate to the caller — that's <code>check()</code> — rename it<br>
+          7. Press <kbd>Ctrl+Alt+F</kbd> on check — who calls check()?<br>
+          8. Navigate to main — what value does it pass to check?<br>
+          9. <strong>Answer:</strong> what input makes the binary print the flag?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            String ref → flag function → rename to "flag_printer"<br>
+            <span class="hc">Ctrl+Alt+F</span> on flag → shows check() calls it<br>
+            Decompiler for check: <span class="hc">if (param_1 == 42) flag_printer()</span><br>
+            Answer: input <span class="hc">42</span> → check passes → flag prints
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,7)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(6)">← prev</button>
+      <button class="nbtn p" onclick="go(8)">Next: Search & Data Types →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L8: Search & Data Types                               -->
+<!-- ====================================================== -->
+<div class="lesson" id="l8">
+  <div class="hero" data-bg="🔍">
+    <div class="hero-eye">Lesson 09 · Reversing</div>
+    <div class="hero-title">Search & Data Types</div>
+    <div class="hero-desc">Searching Ghidra for bytes, scalars, strings, and instruction patterns. Plus: how to use Data Type Manager to apply structs to raw memory — transforms cryptic offsets into readable field names.</div>
+    <div class="hero-pills"><span class="pill">Search Memory</span><span class="pill">Search Text</span><span class="pill">Data Type Manager</span><span class="pill">Apply Data Type</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🔍 Search Capabilities</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra menus</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Search → For Strings (same as Defined Strings, but searchable)</span>
+<span class="ui">Search → For Strings</span>
+
+<span class="cmt"># Search → Memory (like GDB's find command)</span>
+<span class="ui">Search → Memory</span>
+<span class="cmt"># Can search for: hex bytes, strings, regular expressions</span>
+<span class="cmt"># Example: search for "90 90 90" (NOP sled)</span>
+<span class="cmt"># Example: search for "/bin/sh" as string</span>
+<span class="cmt"># Example: search for 0xdeadbeef as 4-byte value (little-endian: ef be ad de)</span>
+
+<span class="cmt"># Search → For Scalars (find specific integer constants)</span>
+<span class="ui">Search → For Scalars</span>
+<span class="cmt"># Find all places where 0x1337 appears as an immediate value</span>
+<span class="cmt"># Super useful for finding hardcoded keys or magic values</span>
+
+<span class="cmt"># Search → Program Text (full text search)</span>
+<span class="ui">Search → Program Text</span>           <span class="cmt">or Ctrl+Shift+F</span>
+<span class="cmt"># Searches: functions, labels, comments, data, instructions</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🏗 Data Type Manager</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Window → Data Type Manager</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Contains: built-in C types + types Ghidra derived from analysis</span>
+<span class="cmt"># Organized in "archives": builtins, libc, Windows API, your binary</span>
+
+<span class="cmt"># Workflow: define a struct, apply it to memory address</span>
+
+<span class="cmt"># Step 1: Create a struct</span>
+<span class="ui">File → New → Structure</span>
+<span class="cmt"># OR: right-click in Data Type Manager → New → Structure</span>
+<span class="cmt"># Add fields with + button: name, type, size</span>
+
+<span class="cmt"># Step 2: Apply to memory</span>
+<span class="cmt"># In Listing: right-click an address → Data → Choose Data Type</span>
+<span class="cmt"># Select your struct → bytes become named fields</span>
+
+<span class="cmt"># Step 3: Navigate struct in Decompiler</span>
+<span class="cmt"># Pointer to struct shows: ptr->field_name instead of *(ptr+0x8)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📌 Quick Data Labeling in Listing</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Listing keyboard shortcuts for data</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">B</span>         <span class="cmt">→ Define as byte (db)</span>
+<span class="ui">W</span>         <span class="cmt">→ Define as word (dw, 2 bytes)</span>
+<span class="ui">D</span>         <span class="cmt">→ Define as dword (dd, 4 bytes)</span>
+<span class="ui">Q</span>         <span class="cmt">→ Define as qword (dq, 8 bytes)</span>
+<span class="ui">A</span>         <span class="cmt">→ Define as string (auto-detects length)</span>
+<span class="ui">P</span>         <span class="cmt">→ Define as pointer</span>
+<span class="ui">F</span>         <span class="cmt">→ Create function at cursor (force code analysis)</span>
+<span class="ui">U</span>         <span class="cmt">→ Undefine data at cursor (clear label)</span>
+
+<span class="cmt"># These are vital when Ghidra mis-identifies data as code or vice versa</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 09: Find the Magic Value</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>int magic=0xDEADC0DE; int main(){int x; scanf("%i",&amp;x); if(x==magic)puts("yes!");}</code><br><br>
+          1. Import and analyze<br>
+          2. <kbd>Search → For Scalars</kbd> — search for <code>0xDEADC0DE</code><br>
+          3. Navigate to the result — where in the binary is it?<br>
+          4. <kbd>Search → Memory</kbd> — search for the bytes <code>DE C0 AD DE</code> (little-endian)<br>
+          5. Find it in the .data section<br>
+          6. In Listing, go to that address — label it <code>magic_value</code> with <kbd>L</kbd><br>
+          7. <strong>Bonus:</strong> <kbd>Search → Program Text</kbd> → search "DEADC0DE" — does it appear as a comment or label anywhere?
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            <span class="hc">Search → For Scalars</span> → type 0xDEADC0DE → searches all instructions using this constant<br>
+            <span class="hc">Search → Memory</span> → hex bytes: DE C0 AD DE → finds in .data<br>
+            In Listing at that address: right-click → <span class="hc">Label → Add Label</span> or press <span class="hc">L</span>
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,8)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(7)">← prev</button>
+      <button class="nbtn p" onclick="go(9)">Next: Patching →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L9: Patching                                          -->
+<!-- ====================================================== -->
+<div class="lesson" id="l9">
+  <div class="hero" data-bg="wx">
+    <div class="hero-eye">Lesson 10 · Reversing</div>
+    <div class="hero-title">Patching Bytes</div>
+    <div class="hero-desc">Ghidra can patch the binary on disk — change bytes, NOP instructions, replace jumps. Combined with its decompiler, this is a powerful way to verify your understanding and create modified binaries.</div>
+    <div class="hero-pills"><span class="pill">Patch Instruction</span><span class="pill">NOP</span><span class="pill">Export Program</span><span class="pill">Assemble</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">✏ Patching Instructions</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra — in Listing view</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Method 1: Patch Instruction (most powerful)</span>
+<span class="cmt"># Right-click instruction in Listing → Patch Instruction</span>
+<span class="cmt"># Type new assembly → Enter</span>
+<span class="cmt"># Ghidra assembles it and writes the bytes</span>
+
+<span class="cmt"># Method 2: Patch Bytes</span>
+<span class="ui">Right-click → Patch Bytes</span>
+<span class="cmt"># Type raw hex bytes to write at that address</span>
+<span class="cmt"># e.g. "90 90 90 90 90" to write 5 NOPs</span>
+
+<span class="cmt"># Common patches:</span>
+<span class="cmt"># JNE (75 XX) → JMP (EB XX) — force jump always</span>
+<span class="cmt"># JE  (74 XX) → NOP NOP    — don't jump at all</span>
+<span class="cmt"># CALL target → NOP x5     — skip function call</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">💾 Exporting the Patched Binary</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra — critical step, patches don't auto-save to disk</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># Patches are stored in the Ghidra project, NOT the original file</span>
+<span class="cmt"># To get an actual runnable patched binary:</span>
+
+<span class="ui">File → Export Program</span>
+<span class="cmt"># Choose format: "Original File" — exports the binary with your patches applied</span>
+<span class="cmt"># Choose output path → OK</span>
+<span class="cmt"># Now run the exported file to test your patch</span>
+
+<span class="cmt"># After export:</span>
+<span class="cmd">chmod +x ./patched_binary</span>
+<span class="cmd">./patched_binary</span>
+        </div>
+      </div>
+      <div class="box warn">
+        <div class="lbl">Important</div>
+        Always export to a <strong>copy</strong>, never the original. Ghidra modifications are non-destructive to the imported file — they're in the project database. You must explicitly export to apply to disk.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">⚡ Practical Patch Examples</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">common CTF patches</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># 1. Skip a check entirely (NOP the conditional jump)</span>
+<span class="cmt"># Find JNE/JE in Listing → Right-click → Patch Instruction → type "NOP"</span>
+<span class="cmt"># May need to NOP 2-6 bytes depending on instruction size</span>
+
+<span class="cmt"># 2. Force a jump (change JNE to JMP)</span>
+<span class="cmt"># JNE 0x401180 → Patch Instruction → "JMP 0x401180"</span>
+
+<span class="cmt"># 3. Force function return 0 or 1</span>
+<span class="cmt"># At function start → Patch Instruction → "XOR EAX,EAX" then "RET"</span>
+<span class="cmt"># Or: "MOV EAX,1" then "RET"</span>
+
+<span class="cmt"># 4. Skip anti-debug (ptrace check)</span>
+<span class="cmt"># Find ptrace call → NOP the whole call + cmp/jne after it</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 10: Patch to Win</div><div class="chal-tag">15 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile: <code>int auth(){return 0;} int main(){if(auth())puts("access granted");else puts("denied");}</code><br><br>
+          Three methods — try all:<br><br>
+          Method A — Patch the branch:<br>
+          1. Find the <code>JE</code>/<code>JZ</code> in main (after testing auth()'s return)<br>
+          2. Right-click → Patch Instruction → change to <code>JMP</code> to the "win" path<br>
+          3. Export → run → see "access granted"<br><br>
+          Method B — Patch auth() to return 1:<br>
+          4. Navigate to auth(), patch first instruction to <code>MOV EAX,0x1</code>, next to <code>RET</code><br>
+          5. Export → run<br><br>
+          Method C — NOP the check:<br>
+          6. Find the <code>TEST EAX,EAX</code> + <code>JZ</code> sequence → NOP both<br>
+          7. Export → run
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            In Decompiler: <span class="hc">if (auth() == 0)</span> → in Listing: <span class="hc">CALL auth; TEST EAX,EAX; JZ denied</span><br>
+            Patch JZ → <span class="hc">Patch Instruction → NOP</span> (NOP is 1 byte, JZ short is 2 bytes → NOP twice)<br>
+            Auth patch: navigate to auth() → first instruction → <span class="hc">Patch Instruction → MOV EAX,0x1</span> → next → <span class="hc">RET</span><br>
+            Export: <span class="hc">File → Export Program → Original File format</span>
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,9)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(8)">← prev</button>
+      <button class="nbtn p" onclick="go(10)">Next: Scripting →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L10: Scripting                                        -->
+<!-- ====================================================== -->
+<div class="lesson" id="l10">
+  <div class="hero" data-bg="&gt;_">
+    <div class="hero-eye">Lesson 11 · Power</div>
+    <div class="hero-title">Scripting — Java & Python (Jython)</div>
+    <div class="hero-desc">Ghidra has a full scripting API. Automate repetitive analysis, XOR-decode embedded strings, dump all function names, extract memory regions — anything you can do in the UI, you can script.</div>
+    <div class="hero-pills"><span class="pill">Script Manager</span><span class="pill">Flat API</span><span class="pill">Python/Jython</span><span class="pill">headless scripts</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">📜 Script Manager</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="ui">Window → Script Manager</span>    <span class="cmt">lists all available scripts</span>
+<span class="ui">Green ▶ button</span>              <span class="cmt">run selected script</span>
+<span class="ui">Edit button (pencil)</span>        <span class="cmt">open script in editor</span>
+<span class="ui">New Script button</span>           <span class="cmt">create a new script</span>
+
+<span class="cmt"># Built-in scripts worth knowing:</span>
+<span class="cmt"># DumpFunctionListScript → exports all function names</span>
+<span class="cmt"># FindStructureByCRC → matches known library structs</span>
+<span class="cmt"># RecoverClassesFromRTTI → recovers C++ class hierarchy</span>
+<span class="cmt"># ImportSymbolsScript → imports symbols from a CSV</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🐍 Python Script Template</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">python (Jython) — Ghidra script boilerplate</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">#@author CTFer</span>
+<span class="cmt">#@category CTF</span>
+<span class="cmt">#@keybinding Ctrl+Shift+X</span>
+<span class="cmt">#@menupath CTF.MyScript</span>
+<span class="cmt">#@toolbar</span>
+
+<span class="cmt"># These vars are available automatically:</span>
+<span class="cmt"># currentProgram, currentLocation, currentSelection</span>
+<span class="cmt"># state, monitor, println()</span>
+
+<span class="cmt">## ── Common API calls ──────────────────────</span>
+
+<span class="cmt"># Get current program</span>
+prog = currentProgram
+fm   = prog.getFunctionManager()
+mem  = prog.getMemory()
+
+<span class="cmt"># List all functions</span>
+<span class="kw">for</span> func <span class="kw">in</span> fm.getFunctions(<span class="kw">True</span>):
+    println(func.getName() + <span class="str">" @ "</span> + str(func.getEntryPoint()))
+
+<span class="cmt"># Get current address</span>
+addr = currentLocation.getAddress()
+println(<span class="str">"Current: "</span> + str(addr))
+
+<span class="cmt"># Read bytes from address</span>
+addr_obj = toAddr(<span class="num">0x401000</span>)
+byte_val = getByte(addr_obj)
+println(<span class="str">"Byte: "</span> + hex(byte_val &amp; <span class="num">0xff</span>))
+
+<span class="cmt"># Write byte (patches the program)</span>
+setByte(addr_obj, <span class="num">0x90</span>)
+
+<span class="cmt"># Get function at address</span>
+func = getFunctionAt(toAddr(<span class="num">0x401156</span>))
+println(func.getName())
+
+<span class="cmt"># Rename function</span>
+func.setName(<span class="str">"my_func"</span>, ghidra.program.model.symbol.SourceType.USER_DEFINED)
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔐 CTF Script: XOR String Decoder</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">python — decode XOR-encrypted strings in binary</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">#@category CTF</span>
+
+<span class="kw">def</span> <span class="fn">xor_decode</span>(start_addr, length, key):
+    result = <span class="str">""</span>
+    addr = toAddr(start_addr)
+    <span class="kw">for</span> i <span class="kw">in</span> range(length):
+        b = getByte(addr.add(i)) &amp; <span class="num">0xff</span>
+        result += chr(b ^ key)
+    <span class="kw">return</span> result
+
+<span class="cmt"># Example: XOR-encoded string at 0x404020, len=20, key=0x42</span>
+decoded = xor_decode(<span class="num">0x404020</span>, <span class="num">20</span>, <span class="num">0x42</span>)
+println(<span class="str">"Decoded: "</span> + decoded)
+
+<span class="cmt"># Auto-label it in the binary</span>
+createLabel(toAddr(<span class="num">0x404020</span>), <span class="str">"decoded_str"</span>, <span class="kw">True</span>)
+
+<span class="cmt"># Set a comment so it shows in Listing</span>
+setEOLComment(toAddr(<span class="num">0x404020</span>), decoded)
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">☕ Headless Scripting (Java)</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Java — for headless mode</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">// ExportFunctions.java — headless script to dump all functions</span>
+<span class="kw">import</span> ghidra.app.script.GhidraScript;
+<span class="kw">import</span> ghidra.program.model.listing.*;
+
+<span class="kw">public class</span> <span class="fn">ExportFunctions</span> <span class="kw">extends</span> GhidraScript {
+    <span class="kw">public void</span> <span class="fn">run</span>() <span class="kw">throws</span> Exception {
+        FunctionManager fm = currentProgram.getFunctionManager();
+        FunctionIterator fi = fm.getFunctions(<span class="kw">true</span>);
+        <span class="kw">while</span> (fi.hasNext()) {
+            Function f = fi.next();
+            println(f.getEntryPoint() + <span class="str">" "</span> + f.getName());
+        }
+    }
+}
+
+<span class="cmt">// Run headless:</span>
+<span class="cmd">./support/analyzeHeadless /tmp/proj P -process ./bin \</span>
+<span class="cmd">  -postScript ExportFunctions.java</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 11: Script the Analysis</div><div class="chal-tag">15 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Write a Ghidra Python script that:<br><br>
+          1. Lists all functions and prints their name + entry address<br>
+          2. Highlights any function whose name contains "FUN_" (unanalyzed) vs named functions<br>
+          3. Counts how many functions have "FUN_" prefix vs have proper names<br>
+          4. Prints the result as a summary<br><br>
+          <strong>Bonus challenge:</strong> Write a second script that:<br>
+          — Finds all calls to <code>strcmp</code><br>
+          — At each call site, reads the second argument (the constant string being compared to)<br>
+          — Prints: <code>0x401234: strcmp with "expected_password"</code>
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            <pre class="hc">fm = currentProgram.getFunctionManager()
+named = 0; unnamed = 0
+for f in fm.getFunctions(True):
+    if f.getName().startswith("FUN_"):
+        unnamed += 1
+    else:
+        named += 1
+        println("Named: " + f.getName())
+println("Named: %d, Unnamed: %d" % (named, unnamed))</pre>
+            For strcmp bonus: find the strcmp symbol, get its references, navigate to each call site, check what's in RSI (arg 2)
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,10)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(9)">← prev</button>
+      <button class="nbtn p" onclick="go(11)">Next: Plugins →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L11: Plugins                                          -->
+<!-- ====================================================== -->
+<div class="lesson" id="l11">
+  <div class="hero" data-bg="🔌">
+    <div class="hero-eye">Lesson 12 · Power</div>
+    <div class="hero-title">Plugins & Extensions</div>
+    <div class="hero-desc">The Ghidra ecosystem has powerful plugins that turn it from a good RE tool into an exceptional one. These are what CTF players install on day one.</div>
+    <div class="hero-pills"><span class="pill">GhidraX</span><span class="pill">BinDiff</span><span class="pill">ret-sync</span><span class="pill">GhidraNES</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🔌 Essential CTF Plugins</div>
+      <table class="tbl">
+        <tr><th>Plugin</th><th>What it adds</th><th>Install</th></tr>
+        <tr><td class="tg">GhidraNinja</td><td class="td">Better decompiler quality, stack var improvements, DWARF debug info</td><td class="tc">github.com/ghidraninja</td></tr>
+        <tr><td class="tg">GhidraX / GhidraExtension</td><td class="td">Dark theme, improved UI for long sessions</td><td class="tc">GitHub search</td></tr>
+        <tr><td class="tg">BinDiff + BinExport</td><td class="td">Diff two binaries — find what changed between versions</td><td class="tc">github.com/google/bindiff</td></tr>
+        <tr><td class="tg">ret-sync</td><td class="td">Sync Ghidra with GDB / x64dbg — click in Ghidra, GDB jumps there</td><td class="tc">github.com/bootleg/ret-sync</td></tr>
+        <tr><td class="tg">ghidra-delinker</td><td class="td">Decompile and re-compile individual functions</td><td class="tc">GitHub</td></tr>
+        <tr><td class="tg">GhidraNES</td><td class="td">NES ROM analysis support</td><td class="tc">GitHub</td></tr>
+        <tr><td class="tg">Kaiju</td><td class="td">CERT's plugin: malware analysis, feature extraction</td><td class="tc">github.com/cmu-sei/kaiju</td></tr>
+        <tr><td class="tg">ghidra-firmware-utils</td><td class="td">Analyze UEFI firmware, BIOS, embedded systems</td><td class="tc">github.com/al3xtjames</td></tr>
+      </table>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔧 Installing Extensions</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># From .zip / .jar file:</span>
+<span class="ui">File → Install Extensions</span>
+<span class="ui">Click + button → select .zip → OK → restart Ghidra</span>
+
+<span class="cmt"># Build from source (most plugins):</span>
+<span class="cmd">cd plugin_repo</span>
+<span class="cmd">GHIDRA_INSTALL_DIR=/path/to/ghidra gradle</span>
+<span class="cmt"># Output: dist/ghidra_*.zip → install via File → Install Extensions</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">🔗 ret-sync: Ghidra + GDB Together</div>
+      <div class="box tip">
+        <div class="lbl">⚡ Most Powerful CTF Setup</div>
+        ret-sync synchronizes Ghidra's static analysis with GDB's dynamic execution. When GDB stops at a breakpoint, Ghidra automatically navigates its Listing to that address — showing you the decompiler output for whatever instruction GDB just hit. The best of both worlds.
+      </div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">setup</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt"># 1. Install ret-sync Ghidra plugin (ghidra side)</span>
+<span class="cmd">git clone https://github.com/bootleg/ret-sync</span>
+<span class="cmt"># Build and install the Ghidra extension</span>
+
+<span class="cmt"># 2. Install ret-sync GDB extension</span>
+<span class="cmd">cp ret-sync/ext_gdb/sync.py ~/.gdbinit.d/</span>
+<span class="cmt"># Add to ~/.gdbinit: source ~/.gdbinit.d/sync.py</span>
+
+<span class="cmt"># 3. Usage:</span>
+<span class="cmt"># In Ghidra: Ghidra → ret-sync → Start (creates a socket)</span>
+<span class="cmt"># In GDB: sync  ← now they're connected</span>
+<span class="cmt"># Step in GDB → Ghidra follows automatically</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Challenge 12: Plugin Setup</div><div class="chal-tag">10 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          1. Go to <kbd>File → Install Extensions</kbd> — browse the built-in extensions Ghidra ships with. What's there?<br>
+          2. Find and install one community extension (e.g., BinExport from Google's releases)<br>
+          3. Restart Ghidra — does the new extension appear?<br>
+          4. <strong>Bonus (hard):</strong> Set up ret-sync between Ghidra and GDB:<br>
+          &nbsp;&nbsp;a. Build/install the Ghidra ret-sync extension<br>
+          &nbsp;&nbsp;b. Source the GDB sync script<br>
+          &nbsp;&nbsp;c. Open a binary in both Ghidra and GDB<br>
+          &nbsp;&nbsp;d. In Ghidra: start ret-sync. In GDB: type <code>sync</code><br>
+          &nbsp;&nbsp;e. Step through GDB and watch Ghidra follow
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            Built-in extensions in Ghidra's install dir: <span class="hc">ls ghidra_*/Extensions/</span><br>
+            BinExport: <span class="hc">github.com/google/binexport/releases</span> → download .zip<br>
+            ret-sync GDB: after sourcing sync.py, type <span class="hc">sync</span> in gdb after starting debug session<br>
+            ret-sync Ghidra: <span class="hc">Ghidra menu → ret-sync → Start listener</span>
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,11)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(10)">← prev</button>
+      <button class="nbtn p" onclick="go(12)">Next: Full CTF Workflow →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================== -->
+<!-- L12: Full CTF Workflow                                 -->
+<!-- ====================================================== -->
+<div class="lesson" id="l12">
+  <div class="hero" data-bg="🏁">
+    <div class="hero-eye">Lesson 13 · Capstone</div>
+    <div class="hero-title">Full CTF Workflow</div>
+    <div class="hero-desc">Everything unified into a repeatable process. From downloading a CTF binary to having the flag — with Ghidra as your primary analysis tool. Plus a comparison table: Ghidra vs r2 vs GDB.</div>
+    <div class="hero-pills"><span class="pill">RE workflow</span><span class="pill">pwn workflow</span><span class="pill">tool comparison</span></div>
+  </div>
+  <div class="body">
+
+    <div class="sec">
+      <div class="sec-title">🔍 Crackme / RE Challenge Workflow</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Triage (outside Ghidra)</div>
+            <div class="code-blk">
+              <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+              <div class="code-body">
+<span class="cmd">file ./binary</span>            <span class="cmt"># What format/arch?</span>
+<span class="cmd">checksec --file=./binary</span> <span class="cmt"># Security mitigations</span>
+<span class="cmd">strings ./binary | grep -i flag</span>  <span class="cmt"># Quick string hunt</span>
+<span class="cmd">strings ./binary | grep -iE 'pass|key|secret|auth'</span>
+<span class="cmd">ltrace ./binary</span>          <span class="cmt"># Library call trace (may reveal strcmp args!)</span>
+<span class="cmd">strace ./binary</span>          <span class="cmt"># Syscall trace</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Import into Ghidra + Analyze</div>
+            <div class="flow">
+              <span class="flow-step">File → Import</span><span class="flow-arr">→</span>
+              <span class="flow-step">Open in CodeBrowser</span><span class="flow-arr">→</span>
+              <span class="flow-step">Yes, Analyze</span><span class="flow-arr">→</span>
+              <span class="flow-step">Accept defaults</span>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Fast triage in Ghidra</div>
+            <div class="code-blk">
+              <div class="code-hdr"><span class="lang">Ghidra checklist</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+              <div class="code-body">
+<span class="ui">1. Symbol Tree → Imports</span>   <span class="cmt">strcmp? gets? system? rand?</span>
+<span class="ui">2. Defined Strings</span>         <span class="cmt">filter: flag, win, pass, correct, CTF{</span>
+<span class="ui">3. Symbol Tree → Functions</span>  <span class="cmt">filter: win, check, auth, flag, secret</span>
+<span class="ui">4. String XRef</span>             <span class="cmt">right-click interesting string → References</span>
+<span class="ui">5. Navigate to interesting fn → read Decompiler</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Deep analysis — rename as you go</div>
+            <div class="code-blk">
+              <div class="code-hdr"><span class="lang">Ghidra</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+              <div class="code-body">
+<span class="cmt"># For each unknown function you navigate into:</span>
+<span class="ui">1. Read decompiler output</span>
+<span class="ui">2. Rename every variable (L key)</span>
+<span class="ui">3. Retype where types are wrong (T key)</span>
+<span class="ui">4. Rename the function itself (L on function name)</span>
+<span class="ui">5. Add comments (;) for non-obvious logic</span>
+<span class="ui">6. Repeat for called functions</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-body">
+            <div class="step-title">Verify with GDB / ltrace</div>
+            <div class="code-blk">
+              <div class="code-hdr"><span class="lang">shell</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+              <div class="code-body">
+<span class="cmt"># Confirm your understanding by running and tracing:</span>
+<span class="cmd">ltrace ./binary &lt;&lt;&lt; "test_input"</span>  <span class="cmt"># see strcmp("test_input","real_pass")</span>
+<span class="cmd">gdb -q ./binary</span>
+<span class="cmd">b strcmp</span>
+<span class="cmd">r &lt;&lt;&lt; "test"</span>
+<span class="cmd">x/s $rsi</span>                        <span class="cmt"># the expected string</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">💥 Pwn Challenge Workflow</div>
+      <div class="code-blk">
+        <div class="code-hdr"><span class="lang">Ghidra for pwn — pure static side</span><button class="cp-btn" onclick="cp(this)">copy</button></div>
+        <div class="code-body">
+<span class="cmt">## Ghidra's role in pwn: understand the binary structure</span>
+<span class="cmt">## GDB/pwntools: dynamic exploitation</span>
+
+<span class="cmt">## 1. Find the vulnerability in Ghidra:</span>
+<span class="ui">Imports → gets/scanf/read/printf</span>    <span class="cmt">dangerous functions</span>
+<span class="ui">XRef → who calls gets?</span>             <span class="cmt">navigate to the vulnerable function</span>
+<span class="ui">Decompiler → read buffer sizes</span>     <span class="cmt">char local_48[64] with gets = overflow!</span>
+
+<span class="cmt">## 2. Find what you want to call:</span>
+<span class="ui">Functions → filter "win" or "shell"</span>  <span class="cmt">any win function?</span>
+<span class="ui">Imports → system</span>                     <span class="cmt">system() in binary?</span>
+<span class="ui">Defined Strings → "/bin/sh"</span>          <span class="cmt">does libc have it? (it does)</span>
+
+<span class="cmt">## 3. Get key addresses from Ghidra:</span>
+<span class="ui">Right-click function/label → Copy Special → Address</span>
+
+<span class="cmt">## 4. Find ROP gadgets:</span>
+<span class="cmd">ROPgadget --binary ./vuln | grep "pop rdi"</span>   <span class="cmt">shell tool, not Ghidra</span>
+<span class="cmd">ropper -f ./vuln --search "pop rdi"</span>
+
+<span class="cmt">## 5. Exploit with pwntools (use Ghidra addresses):</span>
+<span class="kw">from</span> pwn <span class="kw">import</span> *
+elf = ELF(<span class="str">"./vuln"</span>)
+win = elf.symbols[<span class="str">"win"</span>]    <span class="cmt"># pwntools, or hardcode from Ghidra</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">⚖ Ghidra vs r2 vs GDB — When to Use What</div>
+      <table class="tbl">
+        <tr><th>Task</th><th>Best Tool</th><th>Why</th></tr>
+        <tr><td class="td">Decompile complex function</td><td class="tg">Ghidra</td><td class="td">Best decompiler quality, easy renaming workflow</td></tr>
+        <tr><td class="td">Quick binary triage</td><td class="tg">r2 -A + iI + iz</td><td class="td">Faster CLI, no project overhead</td></tr>
+        <tr><td class="td">Live debugging + registers</td><td class="tg">GDB + pwndbg</td><td class="td">Best debugger UX, cyclic, telescope</td></tr>
+        <tr><td class="td">Patch a binary to test</td><td class="tg">r2 -w</td><td class="td">Instant CLI patch without export step</td></tr>
+        <tr><td class="td">Understand C++ classes</td><td class="tg">Ghidra</td><td class="td">RTTI analysis, class recovery plugins</td></tr>
+        <tr><td class="td">ROP gadget search</td><td class="tg">ROPgadget/ropper</td><td class="td">Specialized tools beat both for this</td></tr>
+        <tr><td class="td">Automate analysis scripting</td><td class="tg">Ghidra (Java/Python)</td><td class="td">Richest API, full program model access</td></tr>
+        <tr><td class="td">Firmware / exotic arch</td><td class="tg">Ghidra</td><td class="td">Most architecture support (ARM, MIPS, PPC...)</td></tr>
+        <tr><td class="td">Format string exploitation</td><td class="tg">GDB + pwntools</td><td class="td">Dynamic analysis needed; find offsets at runtime</td></tr>
+        <tr><td class="td">Share analysis with team</td><td class="tg">Ghidra shared project</td><td class="td">Built-in collaborative project server</td></tr>
+      </table>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">📋 Ghidra → GDB Cross-Reference</div>
+      <table class="tbl">
+        <tr><th>Ghidra action</th><th>GDB equivalent</th></tr>
+        <tr><td class="tg">Decompiler view</td><td class="tc">pdc @ func (r2) — no direct GDB equivalent</td></tr>
+        <tr><td class="tg">Navigate to address (G)</td><td class="tc">s 0xaddr (r2) / no GDB equiv (use x/5i)</td></tr>
+        <tr><td class="tg">Defined Strings search</td><td class="tc">iz~pattern (r2) / find range, "str" (GDB)</td></tr>
+        <tr><td class="tg">XRef → who calls this?</td><td class="tc">axt @ sym (r2) / no direct GDB equiv</td></tr>
+        <tr><td class="tg">Memory Map window</td><td class="tc">vmmap (pwndbg) / info proc mappings (GDB)</td></tr>
+        <tr><td class="tg">Rename variable (L)</td><td class="tc">Not in GDB (static only)</td></tr>
+        <tr><td class="tg">Patch Instruction</td><td class="tc">wa instr @ addr (r2) / set *addr=bytes (GDB)</td></tr>
+        <tr><td class="tg">Function Graph window</td><td class="tc">VV (r2) / layout asm (GDB TUI)</td></tr>
+        <tr><td class="tg">Script Manager</td><td class="tc">r2 Python scripts / GDB Python API</td></tr>
+        <tr><td class="tg">Export Program</td><td class="tc">No GDB equiv / write bytes to file (r2)</td></tr>
+      </table>
+    </div>
+
+    <div class="chal">
+      <div class="chal-hdr" onclick="tc(this)">
+        <div class="chal-l"><span class="chal-icon">⚡</span>
+          <div><div class="chal-name">Final Challenge: Complete RE from Scratch</div><div class="chal-tag">capstone · 25 min</div></div>
+        </div><span class="chal-arr">▼</span>
+      </div>
+      <div class="chal-body">
+        <div class="chal-q">
+          Compile this fully stripped binary with multiple layers:<br>
+          <code>gcc -s -O1 -no-pie -o final final.c</code><br><br>
+          <code>int transform(char c){return (c^0x55)+3;}<br>
+          int verify(char*s){char t[]="¢­¦®©­";int i;for(i=0;i&lt;6;i++)if(transform(s[i])!=(unsigned char)t[i])return 0;return 1;}<br>
+          int main(){char b[64];printf("Password: ");scanf("%63s",b);if(verify(b))puts("Correct!");else puts("Wrong.");}</code><br><br>
+          Complete workflow:<br>
+          1. <code>strings ./final | grep -i correct</code> — confirm "Correct!" is there<br>
+          2. <code>ltrace ./final &lt;&lt;&lt; "test"</code> — what do you see?<br>
+          3. Import into Ghidra, analyze<br>
+          4. Find the verify function via string XRef from "Correct!"<br>
+          5. Read the decompiler — understand the transform + comparison logic<br>
+          6. Rename all variables in verify() and transform()<br>
+          7. Write a Python script (outside Ghidra) to reverse transform and find the password<br>
+          8. Verify with <code>./final &lt;&lt;&lt; "your_answer"</code><br>
+          9. <strong>Bonus:</strong> Write a Ghidra script to decode the target bytes automatically
+        </div>
+        <div class="hint-wrap">
+          <button class="hint-tog" onclick="th(this)">▶ show hint</button>
+          <div class="hint-body">
+            transform(c) = (c ^ 0x55) + 3<br>
+            Inverse: c = (result - 3) ^ 0x55<br>
+            Target bytes (the array in verify): get them from Ghidra's decompiler or Listing → look for the char array in the .rodata<br>
+            Decode script:
+            <pre class="hc">target = [0xc2,0xad,0xa6,0xae,0xa9,0xad]  # approximate
+flag = ""
+for b in target:
+    flag += chr((b - 3) ^ 0x55)
+print(flag)</pre>
+            The exact target bytes: look at the decompiler carefully — they may show as signed ints
+          </div>
+        </div>
+        <button class="done-btn" onclick="md(this,12)">Mark done ✓</button>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="nbtn" onclick="go(11)">← prev</button>
+      <button class="nbtn" style="border-color:var(--gold);color:var(--gold);background:var(--gold-dim);font-weight:600" disabled>🎓 Ghidra Complete</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- CHEATSHEET -->
+<div class="cs-tab" onclick="tcs()">Cheat Sheet</div>
+<div class="cs-panel" id="csp">
+  <div class="cs-grp">
+    <div class="cs-title">Launch / Import</div>
+    <div class="cs-row"><span class="cs-k">./ghidraRun</span><span class="cs-v">launch GUI</span></div>
+    <div class="cs-row"><span class="cs-k">File → Import</span><span class="cs-v">import binary into project</span></div>
+    <div class="cs-row"><span class="cs-k">Analysis → Auto Analyze</span><span class="cs-v">run analysis</span></div>
+    <div class="cs-row"><span class="cs-k">analyzeHeadless</span><span class="cs-v">no-GUI batch mode</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Navigation</div>
+    <div class="cs-row"><span class="cs-k">G</span><span class="cs-v">go to address</span></div>
+    <div class="cs-row"><span class="cs-k">Alt+← / Alt+→</span><span class="cs-v">back / forward</span></div>
+    <div class="cs-row"><span class="cs-k">double-click</span><span class="cs-v">navigate to symbol</span></div>
+    <div class="cs-row"><span class="cs-k">Ctrl+F</span><span class="cs-v">search current view</span></div>
+    <div class="cs-row"><span class="cs-k">Ctrl+Shift+F</span><span class="cs-v">search everything</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Rename & Retype</div>
+    <div class="cs-row"><span class="cs-k">L</span><span class="cs-v">rename symbol at cursor</span></div>
+    <div class="cs-row"><span class="cs-k">T</span><span class="cs-v">retype variable</span></div>
+    <div class="cs-row"><span class="cs-k">Ctrl+Z</span><span class="cs-v">undo any edit</span></div>
+    <div class="cs-row"><span class="cs-k">right-click → Edit Fn Sig</span><span class="cs-v">edit function signature</span></div>
+    <div class="cs-row"><span class="cs-k">right-click → Auto Create Struct</span><span class="cs-v">auto-struct from offsets</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">XRefs</div>
+    <div class="cs-row"><span class="cs-k">Ctrl+Alt+F</span><span class="cs-v">show refs to cursor</span></div>
+    <div class="cs-row"><span class="cs-k">right-click → References</span><span class="cs-v">show/find references</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Call Trees</span><span class="cs-v">call graph</span></div>
+    <div class="cs-row"><span class="cs-k">XREF[N] in Listing</span><span class="cs-v">click to see callers</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Windows</div>
+    <div class="cs-row"><span class="cs-k">Window → Decompiler</span><span class="cs-v">C pseudocode</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Symbol Tree</span><span class="cs-v">functions/imports/exports</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Defined Strings</span><span class="cs-v">all strings</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Function Graph</span><span class="cs-v">CFG view</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Memory Map</span><span class="cs-v">sections</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Data Type Mgr</span><span class="cs-v">structs/types</span></div>
+    <div class="cs-row"><span class="cs-k">Window → Script Manager</span><span class="cs-v">run/edit scripts</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Comments</div>
+    <div class="cs-row"><span class="cs-k">;</span><span class="cs-v">EOL comment</span></div>
+    <div class="cs-row"><span class="cs-k">Ctrl+;</span><span class="cs-v">pre-comment</span></div>
+    <div class="cs-row"><span class="cs-k">Ctrl+Shift+;</span><span class="cs-v">plate comment</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Search</div>
+    <div class="cs-row"><span class="cs-k">Search → Memory</span><span class="cs-v">bytes / string search</span></div>
+    <div class="cs-row"><span class="cs-k">Search → For Scalars</span><span class="cs-v">find constant values</span></div>
+    <div class="cs-row"><span class="cs-k">Search → Program Text</span><span class="cs-v">full text search</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Listing Keys</div>
+    <div class="cs-row"><span class="cs-k">D</span><span class="cs-v">disassemble at cursor</span></div>
+    <div class="cs-row"><span class="cs-k">F</span><span class="cs-v">create function at cursor</span></div>
+    <div class="cs-row"><span class="cs-k">B/W/D/Q</span><span class="cs-v">define byte/word/dword/qword</span></div>
+    <div class="cs-row"><span class="cs-k">A</span><span class="cs-v">define string</span></div>
+    <div class="cs-row"><span class="cs-k">U</span><span class="cs-v">undefine data</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Patch & Export</div>
+    <div class="cs-row"><span class="cs-k">right-click → Patch Instruction</span><span class="cs-v">modify assembly</span></div>
+    <div class="cs-row"><span class="cs-k">right-click → Patch Bytes</span><span class="cs-v">write raw hex</span></div>
+    <div class="cs-row"><span class="cs-k">File → Export Program</span><span class="cs-v">save patched binary</span></div>
+  </div>
+  <div class="cs-grp">
+    <div class="cs-title">Scripting API</div>
+    <div class="cs-row"><span class="cs-k">currentProgram</span><span class="cs-v">the open binary</span></div>
+    <div class="cs-row"><span class="cs-k">getFunctionManager()</span><span class="cs-v">all functions</span></div>
+    <div class="cs-row"><span class="cs-k">toAddr(0x401000)</span><span class="cs-v">make Address object</span></div>
+    <div class="cs-row"><span class="cs-k">getByte(addr)</span><span class="cs-v">read 1 byte</span></div>
+    <div class="cs-row"><span class="cs-k">setByte(addr, val)</span><span class="cs-v">write 1 byte</span></div>
+    <div class="cs-row"><span class="cs-k">println("text")</span><span class="cs-v">print to console</span></div>
+  </div>
+</div>
+
+<script>
+let cur=0; const total=13; const done=new Set(); let csOpen=false;
+
+function go(n){
+  document.getElementById(`l${cur}`)?.classList.remove('active');
+  document.getElementById(`l${n}`)?.classList.add('active');
+  document.querySelector(`[data-n="${cur}"]`)?.classList.remove('active');
+  document.querySelector(`[data-n="${n}"]`)?.classList.add('active');
+  cur=n; document.getElementById('mainArea').scrollTop=0;
+}
+function tc(h){
+  const b=h.nextElementSibling, a=h.querySelector('.chal-arr');
+  b.classList.toggle('open');
+  a.textContent=b.classList.contains('open')?'▲':'▼';
+}
+function th(btn){
+  const b=btn.nextElementSibling;
+  b.classList.toggle('open');
+  btn.textContent=b.classList.contains('open')?'▼ hide hint':'▶ show hint';
+}
+function md(btn,idx){
+  btn.classList.toggle('marked');
+  if(btn.classList.contains('marked')){
+    btn.textContent='✓ Done!'; done.add(idx);
+    document.querySelector(`[data-n="${idx}"]`)?.classList.add('done');
+  } else {
+    btn.textContent='Mark done ✓'; done.delete(idx);
+    document.querySelector(`[data-n="${idx}"]`)?.classList.remove('done');
+  }
+  const p=Math.round(done.size/total*100);
+  document.getElementById('pf').style.width=p+'%';
+  document.getElementById('pc').textContent=`${done.size}/${total}`;
+}
+function tcs(){
+  csOpen=!csOpen;
+  document.getElementById('csp').classList.toggle('open',csOpen);
+}
+function cp(btn){
+  const code=btn.closest('.code-blk').querySelector('.code-body').innerText;
+  navigator.clipboard.writeText(code).then(()=>{
+    btn.textContent='copied!';
+    setTimeout(()=>btn.textContent='copy',1500);
+  });
+}
+</script>
+</body>
+</html>
